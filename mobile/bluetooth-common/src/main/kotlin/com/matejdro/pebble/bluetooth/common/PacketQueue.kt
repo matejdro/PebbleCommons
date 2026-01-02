@@ -1,6 +1,9 @@
 package com.matejdro.pebble.bluetooth.common
 
+import com.matejdro.pebble.bluetooth.common.di.WatchappConnectionScope
 import com.matejdro.pebble.bluetooth.common.exceptions.UnrecoverableWatchTransferException
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import io.rebble.pebblekit2.client.PebbleSender
 import io.rebble.pebblekit2.common.model.PebbleDictionary
 import io.rebble.pebblekit2.common.model.TransmissionResult
@@ -14,9 +17,12 @@ import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.milliseconds
 
+@Inject
+@SingleIn(WatchappConnectionScope::class)
 class PacketQueue(
    private val sender: PebbleSender,
    private val watch: WatchIdentifier,
+   @WatchappId
    private val watchappUuid: UUID,
 ) {
    private val newPacketNotification = Channel<Unit>(Channel.CONFLATED)
