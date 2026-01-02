@@ -22,6 +22,7 @@ dependencies {
    implementation(libs.kotlin.coroutines)
    implementation(libs.logcat)
    implementation(libs.androidx.workManager)
+   implementation(libs.okio)
    implementation(libs.pebblekit)
 
    testImplementation(projects.bucketsync.test)

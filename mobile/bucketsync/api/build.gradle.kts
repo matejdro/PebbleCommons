@@ -3,4 +3,5 @@ plugins {
 }
 
 dependencies {
+   api(libs.pebblekit.common.api)
 }
