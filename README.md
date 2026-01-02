@@ -1,2 +1,3 @@
-# PebbleAndroidCommons
-Shared classes between Notification Center for Pebble and Dialer for Pebble
+# PebbleCommons
+
+Shared code between my various Pebble apps

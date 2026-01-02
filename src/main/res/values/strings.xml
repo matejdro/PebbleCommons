@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="tap_vibration_pattern">Tap the pattern</string>
-    <string name="finish_tapping">Finish tapping</string>
-
-    <string name="tap_here">Tap Here</string>
-    <string name="vibration_pattern_limit_reached">Vibration pattern limit reached</string>
-    <string name="invalid_vibration_pattern">Invalid vibration pattern.</string>
-</resources>
