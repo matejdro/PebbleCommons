@@ -40,7 +40,7 @@ class GetForegroundAppWorker(
       val foregroundApp = pebbleinfoRetriever.getActiveApp(watchId).first()
       logcat { "Foreground app for $watchId: ${foregroundApp ?: "null"}" }
 
-      if (foregroundApp?.isWatchface == Watchapp.Type.WATCHFACE) {
+      if (foregroundApp?.type == Watchapp.Type.WATCHFACE) {
          logcat { "It's watchface! Scheduling open..." }
          workerController.scheduleOpenWatchappWorker(watchId)
       } else {
