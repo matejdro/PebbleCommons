@@ -6,7 +6,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.matejdro.bucketsync.BucketSyncAutoSyncNotifier
 import com.matejdro.bucketsync.di.BucketSyncWorkerKey
-import com.matejdro.bucketsync.di.WatchappId
+import com.matejdro.pebble.bluetooth.common.WatchappId
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory

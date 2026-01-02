@@ -13,6 +13,7 @@ sqldelight {
    }
 }
 dependencies {
+   api(projects.bluetoothCommon)
    api(projects.bucketsync.api)
    api(libs.androidx.datastore.preferences.core)
 

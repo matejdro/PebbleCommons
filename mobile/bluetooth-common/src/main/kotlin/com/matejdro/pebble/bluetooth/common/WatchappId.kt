@@ -1,4 +1,4 @@
-package com.matejdro.bucketsync.di
+package com.matejdro.pebble.bluetooth.common
 
 import dev.zacsweers.metro.Qualifier
 
