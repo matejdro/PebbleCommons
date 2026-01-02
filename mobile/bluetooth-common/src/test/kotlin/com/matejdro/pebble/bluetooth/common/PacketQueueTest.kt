@@ -1,8 +1,8 @@
 package com.matejdro.pebble.bluetooth.common
 
-import com.matejdro.catapult.bluetooth.FakePebbleSender
-import com.matejdro.catapult.bluetooth.FakePebbleSender.SentPacket
 import com.matejdro.pebble.bluetooth.common.exceptions.UnrecoverableWatchTransferException
+import com.matejdro.pebble.bluetooth.common.test.FakePebbleSender
+import com.matejdro.pebble.bluetooth.common.test.FakePebbleSender.SentPacket
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.rebble.pebblekit2.common.model.PebbleDictionaryItem
@@ -168,12 +168,13 @@ class PacketQueueTest {
    }
 }
 
-private fun SentPacketWithValue(value: UByte, time: Duration = Duration.ZERO): SentPacket = SentPacket(
-   WATCHAPP_UUID,
-   mapOf(0u to PebbleDictionaryItem.UInt8(value)),
-   listOf(WATCH_ID),
-   sentTime = time.inWholeMilliseconds,
-)
+private fun SentPacketWithValue(value: UByte, time: Duration = Duration.ZERO): SentPacket =
+   SentPacket(
+      WATCHAPP_UUID,
+      mapOf(0u to PebbleDictionaryItem.UInt8(value)),
+      listOf(WATCH_ID),
+      sentTime = time.inWholeMilliseconds,
+   )
 
 private val WATCH_ID = WatchIdentifier("Watch")
 private val WATCHAPP_UUID = UUID.fromString("882e39c3-de34-4dbc-a721-2eb4d1c30f29")
