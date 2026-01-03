@@ -9,7 +9,6 @@ import com.matejdro.bucketsync.background.FakeBackgroundSyncNotifier
 import com.matejdro.bucketsync.sqldelight.generated.Database
 import com.matejdro.bucketsync.sqldelight.generated.DbBucket
 import com.matejdro.bucketsync.sqldelight.generated.DbBucketQueries
-import com.matejdro.catapult.common.test.datastore.InMemoryDataStore
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
