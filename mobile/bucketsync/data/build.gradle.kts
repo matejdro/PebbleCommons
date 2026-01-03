@@ -26,7 +26,6 @@ dependencies {
    implementation(libs.pebblekit)
 
    testImplementation(projects.bucketsync.test)
-   testImplementation(projects.common.test)
    testImplementation(libs.kotlinova.core.test)
    testImplementation(libs.turbine)
 }
