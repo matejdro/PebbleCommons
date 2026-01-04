@@ -12,6 +12,7 @@ import com.matejdro.bucketsync.sqldelight.generated.DbBucketQueries
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import dispatch.core.withIO
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
@@ -21,12 +22,17 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Inject
 @ContributesBinding(AppScope::class)
+@SingleIn(AppScope::class)
 class BucketsyncRepositoryImpl(
    private val queries: DbBucketQueries,
    private val preferences: DataStore<Preferences>,
    private val backgroundSyncNotifier: BackgroundSyncNotifier,
 ) : BucketSyncRepository {
-   override suspend fun init(protocolVersion: Int): Boolean {
+   private lateinit var dynamicBucketPool: IntRange
+
+   override suspend fun init(protocolVersion: Int, dynamicPool: IntRange): Boolean {
+      dynamicBucketPool = dynamicPool
+
       val version = preferences.data.first()[lastVersionKey]
       logcat { "Bucket sync init from ${version ?: "START"} to $protocolVersion" }
       return if (version != protocolVersion) {
@@ -40,11 +46,15 @@ class BucketsyncRepositoryImpl(
       }
    }
 
-   override suspend fun updateBucket(id: UByte, data: ByteArray) = withIO<Unit> {
+   override suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?) {
+      updateBucket(id, data, sortKey, null)
+   }
+
+   private suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, upstreamId: String?) = withIO<Unit> {
       queries.transaction {
          require(data.size <= MAX_BUCKET_SIZE) { "bucket size (${data.size}) must be at most 256 bytes" }
          logcat { "Update bucket $id (${data.size} bytes)" }
-         queries.insert(id.toLong(), data)
+         queries.insert(id.toLong(), data, sortKey, upstreamId)
          val updatedBucket = queries.getBucket(id.toLong()).executeAsOne()
          if (updatedBucket.version > UShort.MAX_VALUE.toLong()) {
             logcat { "Got over UShort_MAX, wrapping around" }
@@ -55,7 +65,7 @@ class BucketsyncRepositoryImpl(
       backgroundSyncNotifier.notifyDataChanged()
    }
 
-   override suspend fun awaitNextUpdate(currentVersion: UShort): BucketUpdate = withIO {
+   override suspend fun awaitNextUpdate(currentVersion: UShort, maxActiveBuckets: Int): BucketUpdate = withIO {
       logcat { "Await next update from $currentVersion" }
       val versionFlow = queries.getLatestVersion().asFlow().map { it.executeAsOne().MAX?.toUShort() ?: 0u }
       val newVersion = versionFlow.debounce(BUCKET_UPDATE_DEBOUNCE).first { it != currentVersion }
@@ -69,10 +79,10 @@ class BucketsyncRepositoryImpl(
          0u
       }
 
-      createBucketUpdate(requestVersion, newVersion)
+      createBucketUpdate(requestVersion, newVersion, maxActiveBuckets)
    }
 
-   override suspend fun checkForNextUpdate(currentVersion: UShort): BucketUpdate? = withIO {
+   override suspend fun checkForNextUpdate(currentVersion: UShort, maxActiveBuckets: Int): BucketUpdate? = withIO {
       logcat { "Check next update from $currentVersion" }
       val latestVersion = queries.getLatestVersion().executeAsOne().MAX?.toUShort() ?: 0u
 
@@ -87,12 +97,15 @@ class BucketsyncRepositoryImpl(
          0u
       }
 
-      createBucketUpdate(requestVersion, latestVersion)
+      createBucketUpdate(requestVersion, latestVersion, maxActiveBuckets)
    }
 
-   private fun createBucketUpdate(requestVersion: UShort, newVersion: UShort): BucketUpdate {
-      val bucketsToUpdate = queries.getUpdatedBuckets(requestVersion.toLong()).executeAsList()
-      val activeBuckets = queries.getActiveBuckets().executeAsList().map { it.toUShort() }
+   private fun createBucketUpdate(requestVersion: UShort, newVersion: UShort, maxActiveBuckets: Int): BucketUpdate {
+      val activeBuckets = queries.getActiveBuckets(maxActiveBuckets.toLong()).executeAsList().map { it.toUShort() }
+      val bucketsToUpdate = queries.getUpdatedBuckets(
+         requestVersion.toLong(),
+         activeBuckets.map { it.toLong() }
+      ).executeAsList()
 
       logcat { "Active buckets: $activeBuckets, bucketsToUpdate: ${bucketsToUpdate.map { it.id }}" }
 
@@ -105,13 +118,53 @@ class BucketsyncRepositoryImpl(
 
    override suspend fun deleteBucket(id: UByte) = withIO<Unit> {
       logcat { "Delete bucket $id" }
-      queries.insert(id.toLong(), null)
+      queries.clearBucket(id.toLong())
+      backgroundSyncNotifier.notifyDataChanged()
+   }
+
+   override suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long?) = withIO<Unit> {
+      val existingBucket = queries.getBucketWithUpstreamId(upstreamId).executeAsOneOrNull()
+
+      val targetBucketId = if (existingBucket != null) {
+         existingBucket
+      } else {
+         val nextBucketId = queries.getMaxSequenceId().executeAsOneOrNull()?.MAX.let { it ?: 0 } + 1
+
+         if (nextBucketId < dynamicBucketPool.first) {
+            dynamicBucketPool.first.toLong()
+         } else if (nextBucketId > dynamicBucketPool.last) {
+            queries.getOldestBucketInRange(dynamicBucketPool.first.toLong(), dynamicBucketPool.last.toLong()).executeAsOne()
+         } else {
+            nextBucketId
+         }
+      }
+
+      updateBucket(targetBucketId.toUByte(), data, sortKey, upstreamId)
+   }
+
+   override suspend fun deleteBucketDynamic(upstreamId: String) = withIO<Unit> {
+      val existingBucket = queries.getBucketWithUpstreamId(upstreamId).executeAsOneOrNull()
+      if (existingBucket != null) {
+         deleteBucket(existingBucket.toUByte())
+      }
+   }
+
+   override suspend fun clearAllDynamic() = withIO<Unit> {
+      queries.transaction {
+         val nextVersion = queries.getLatestVersion().executeAsOneOrNull().let { it?.MAX ?: 0 } + 1
+         queries.clearBuckets(
+            nextVersion,
+            dynamicBucketPool.first.toLong(),
+            dynamicBucketPool.last.toLong()
+         ).value
+      }
+
       backgroundSyncNotifier.notifyDataChanged()
    }
 }
 
 // Matching PERSIST_DATA_MAX_LENGTH of the watch SDK
-private val BUCKET_UPDATE_DEBOUNCE = 100.milliseconds
 private const val MAX_BUCKET_SIZE = 256
+private val BUCKET_UPDATE_DEBOUNCE = 100.milliseconds
 
 private val lastVersionKey = intPreferencesKey("bucketsync_last_version")

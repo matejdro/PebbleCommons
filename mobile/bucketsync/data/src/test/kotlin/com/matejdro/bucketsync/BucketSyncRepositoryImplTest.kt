@@ -9,6 +9,7 @@ import com.matejdro.bucketsync.background.FakeBackgroundSyncNotifier
 import com.matejdro.bucketsync.sqldelight.generated.Database
 import com.matejdro.bucketsync.sqldelight.generated.DbBucket
 import com.matejdro.bucketsync.sqldelight.generated.DbBucketQueries
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -301,7 +302,7 @@ class BucketSyncRepositoryImplTest {
    @Test
    fun `When version passes 65535 (ushort max), it should wrap around back to one`() = scope.runTest {
       db.insertRaw(
-         DbBucket(1, byteArrayOf(1), 65535)
+         DbBucket(1, byteArrayOf(1), 65535, null, null)
       )
 
       repo.init(1)
@@ -343,6 +344,276 @@ class BucketSyncRepositoryImplTest {
 
       repo.deleteBucket(2u)
       runCurrent()
+
+      notifier.dataChangeNotified shouldBe true
+   }
+
+   @Test
+   fun `Report all added buckets ordered by sort key, ascending`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1), sortKey = 2)
+      repo.updateBucket(2u, byteArrayOf(2), sortKey = 1)
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate.activeBuckets.shouldContainExactly(2u, 1u)
+   }
+
+   @Test
+   fun `Order buckets by id where sort keys are not available and put null keys first`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1))
+      repo.updateBucket(2u, byteArrayOf(2), sortKey = 1)
+      repo.updateBucket(3u, byteArrayOf(3), sortKey = 2)
+      repo.updateBucket(4u, byteArrayOf(4))
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate.activeBuckets.shouldContainExactly(1u, 4u, 2u, 3u)
+   }
+
+   @Test
+   fun `Limit maximum reported buckets in awaitNextUpdate`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1))
+      repo.updateBucket(2u, byteArrayOf(2))
+      repo.updateBucket(3u, byteArrayOf(3))
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, maxActiveBuckets = 2)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         3u,
+         listOf(1u, 2u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(2))
+         )
+      )
+   }
+
+   @Test
+   fun `Limit maximum reported buckets in checkForNextUpdate`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1))
+      repo.updateBucket(2u, byteArrayOf(2))
+      repo.updateBucket(3u, byteArrayOf(3))
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.checkForNextUpdate(0u, maxActiveBuckets = 2)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         3u,
+         listOf(1u, 2u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(2))
+         )
+      )
+   }
+
+   @Test
+   fun `Force update buckets when sort key changes even if the data is the same`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1), sortKey = 2)
+      repo.updateBucket(2u, byteArrayOf(2), sortKey = 3)
+      delay(1.seconds)
+
+      repo.updateBucket(2u, byteArrayOf(2), sortKey = 1)
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         3u,
+         listOf(2u, 1u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(2)),
+         )
+      )
+   }
+
+   @Test
+   fun `Report dynamically added buckets when updating from version 0`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1))
+      repo.updateBucketDynamic("2", byteArrayOf(2))
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         2u,
+         listOf(1u, 2u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(2))
+         )
+      )
+
+      notifier.dataChangeNotified shouldBe true
+   }
+
+   @Test
+   fun `Reuse dynamic buckets when upstream ID matches`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1))
+      repo.updateBucketDynamic("1", byteArrayOf(2))
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         2u,
+         listOf(1u),
+         listOf(
+            Bucket(1u, byteArrayOf(2)),
+         )
+      )
+   }
+
+   @Test
+   fun `Repurpose oldest buckets when dynamic buckets runs out of pool`() = scope.runTest {
+      repo.init(1, dynamicPool = 2..3)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1)
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2)
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
+      repo.updateBucketDynamic("4", byteArrayOf(4), sortKey = -4)
+      repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5)
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         5u,
+         listOf(2u, 3u),
+         listOf(
+            Bucket(2u, byteArrayOf(5)),
+            Bucket(3u, byteArrayOf(4)),
+         )
+      )
+   }
+
+   @Test
+   fun `Delete dynamically added buckets`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1))
+      repo.updateBucketDynamic("2", byteArrayOf(2))
+      repo.deleteBucketDynamic("1")
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         3u,
+         listOf(2u),
+         listOf(
+            Bucket(2u, byteArrayOf(2)),
+         )
+      )
+   }
+
+   @Test
+   fun `Report data changed when deleting buckets`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1))
+      repo.updateBucketDynamic("2", byteArrayOf(2))
+      runCurrent()
+
+      notifier.dataChangeNotified = false
+      repo.deleteBucketDynamic("1")
+      delay(1.seconds)
+
+      notifier.dataChangeNotified shouldBe true
+   }
+
+   @Test
+   fun `Do not create updates when dynamic bucket to delete does not exist`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1))
+      repo.updateBucketDynamic("2", byteArrayOf(2))
+      delay(1.seconds)
+
+      repo.awaitNextUpdate(0u)
+
+      repo.deleteBucketDynamic("3")
+      delay(1.seconds)
+
+      repo.checkForNextUpdate(2u) shouldBe null
+   }
+
+   @Test
+   fun `Do not repurpose buckets outside pool`() = scope.runTest {
+      repo.init(1, dynamicPool = 2..3)
+
+      repo.updateBucket(1u, byteArrayOf(1), sortKey = 0)
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1)
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2)
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
+      repo.updateBucketDynamic("4", byteArrayOf(4), sortKey = -4)
+      repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5)
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         6u,
+         listOf(2u, 3u, 1u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(5)),
+            Bucket(3u, byteArrayOf(4)),
+         )
+      )
+   }
+
+   @Test
+   fun `Clear all dynamic`() = scope.runTest {
+      repo.init(1, dynamicPool = 2..3)
+
+      repo.updateBucket(1u, byteArrayOf(1), sortKey = 0)
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1)
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2)
+      repo.clearAllDynamic()
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         4u,
+         listOf(1u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+         )
+      )
+   }
+
+   @Test
+   fun `Report data changed when clearing all dynamic buckets`() = scope.runTest {
+      repo.init(1, dynamicPool = 2..3)
+
+      repo.updateBucket(1u, byteArrayOf(1), sortKey = 0)
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1)
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2)
+      runCurrent()
+      notifier.dataChangeNotified = false
+
+      repo.clearAllDynamic()
+      delay(1.seconds)
 
       notifier.dataChangeNotified shouldBe true
    }

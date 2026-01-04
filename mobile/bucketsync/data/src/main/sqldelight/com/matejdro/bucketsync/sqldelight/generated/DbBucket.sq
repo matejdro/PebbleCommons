@@ -1,17 +1,30 @@
 CREATE TABLE dbBucket (
     id INTEGER PRIMARY KEY NOT NULL,
     data BLOB,
-    version INTEGER NOT NULL
+    version INTEGER NOT NULL,
+    sortKey INTEGER DEFAULT NULL,
+    upstreamId TEXT DEFAULT NULL
 );
 
 insert:
-   REPLACE INTO dbBucket (id, version, data)
+   REPLACE INTO dbBucket (id, version, data, sortKey, upstreamId)
    SELECT
     :id,
     (SELECT COALESCE(MAX(version) + 1, 1) FROM dbBucket),
-    :data
+    :data,
+    :sortKey,
+    :upstreamId
    WHERE NOT EXISTS
-    (SELECT 1 FROM dbBucket WHERE id = :id AND data = :data);
+    (SELECT 1 FROM dbBucket WHERE id = :id AND data = :data AND sortKey = :sortKey AND upstreamId = :upstreamId);
+
+clearBucket:
+   REPLACE INTO dbBucket (id, version, data, sortKey)
+   VALUES (:id, (SELECT COALESCE(MAX(version) + 1, 1) FROM dbBucket), NULL, NULL);
+
+clearBuckets:
+   UPDATE dbBucket
+    SET data = NULL, version = :newVersion
+    WHERE id >= :minInclusive AND id <= :maxInclusive;
 
 getBucket:
     SELECT * FROM dbBucket WHERE id = :id;
@@ -20,13 +33,22 @@ resetAllVersions:
     UPDATE dbBucket SET version = 1;
 
 getUpdatedBuckets:
-   SELECT * FROM dbBucket WHERE version > :oldVersion AND data IS NOT NULL;
+   SELECT * FROM dbBucket WHERE version > :oldVersion AND data IS NOT NULL AND id IN :allowedBuckets;
 
 getActiveBuckets:
-   SELECT id FROM dbBucket WHERE data IS NOT NULL;
+   SELECT id FROM dbBucket WHERE data IS NOT NULL ORDER BY sortKey ASC, id ASC LIMIT :limit;
 
 getLatestVersion:
    SELECT MAX(version) FROM dbBucket;
+
+getMaxSequenceId:
+    SELECT MAX(id) FROM dbBucket;
+
+getBucketWithUpstreamId:
+    SELECT id FROM dbBucket WHERE upstreamId = :id LIMIT 1;
+
+getOldestBucketInRange:
+    SELECT id FROM dbBucket WHERE id >= :minInclusive AND id <= :maxInclusive ORDER BY sortKey DESC, id DESC LIMIT 1;
 
 deleteAll:
     DELETE FROM dbBucket;
