@@ -57,6 +57,9 @@ interface BucketSyncRepository {
     * Delete all buckets from the dynamic pool
     */
    suspend fun clearAllDynamic()
-}
 
-private const val MAX_BUCKET_ID = 255
+   companion object {
+      const val MAX_BUCKET_ID = 255
+      const val MAX_BUCKET_SIZE_BYTES = 256
+   }
+}
