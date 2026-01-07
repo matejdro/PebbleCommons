@@ -5,7 +5,7 @@ import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 import java.util.Arrays
 
-class LimitingStringEncoder() {
+class LimitingStringEncoder {
    private val utf8Encoder = StandardCharsets.UTF_8.newEncoder()
 
    fun encodeSizeLimited(text: String, maxSize: Int, ellipsize: Boolean = true): ByteArray {

@@ -52,7 +52,9 @@ class BucketsyncRepositoryImpl(
 
    private suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, upstreamId: String?) = withIO<Unit> {
       queries.transaction {
-         require(data.size <= BucketSyncRepository.MAX_BUCKET_SIZE_BYTES) { "bucket size (${data.size}) must be at most 255 bytes" }
+         require(data.size <= BucketSyncRepository.MAX_BUCKET_SIZE_BYTES) {
+            "bucket size (${data.size}) must be at most 255 bytes"
+         }
          logcat { "Update bucket $id (${data.size} bytes)" }
          val inserted = queries.insert(id.toLong(), data, sortKey, upstreamId).value
          if (inserted == 0L) {
