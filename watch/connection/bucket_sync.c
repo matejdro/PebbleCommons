@@ -85,6 +85,17 @@ bool bucket_sync_load_bucket(const uint8_t bucket_id, uint8_t* target)
     return status != E_DOES_NOT_EXIST;
 }
 
+ uint8_t bucket_sync_get_bucket_size(uint8_t bucket_id)
+{
+    const int value = persist_get_size(get_bucket_persist_key(bucket_id));
+    if (value == E_DOES_NOT_EXIST)
+    {
+        return 0;
+    }
+
+    return value;
+}
+
 BucketList* bucket_sync_get_bucket_list()
 {
     return &buckets;

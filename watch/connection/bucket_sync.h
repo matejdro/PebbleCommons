@@ -33,6 +33,11 @@ void bucket_sync_init();
 bool bucket_sync_load_bucket(uint8_t bucket_id, uint8_t* target);
 
 /**
+ * @return Size of the bucket in bytes or 0 if bucket does not exist
+ */
+uint8_t bucket_sync_get_bucket_size(uint8_t bucket_id);
+
+/**
  * Get the list of currently active buckets. Provided structure must be kept read-only, do not write anything into it.
  */
 BucketList* bucket_sync_get_bucket_list();
