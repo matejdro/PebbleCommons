@@ -52,9 +52,12 @@ class BucketsyncRepositoryImpl(
 
    private suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, upstreamId: String?) = withIO<Unit> {
       queries.transaction {
-         require(data.size <= MAX_BUCKET_SIZE) { "bucket size (${data.size}) must be at most 256 bytes" }
+         require(data.size <= BucketSyncRepository.MAX_BUCKET_SIZE_BYTES) { "bucket size (${data.size}) must be at most 255 bytes" }
          logcat { "Update bucket $id (${data.size} bytes)" }
-         queries.insert(id.toLong(), data, sortKey, upstreamId)
+         val inserted = queries.insert(id.toLong(), data, sortKey, upstreamId).value
+         if (inserted == 0L) {
+            logcat { "Content was identical, skipping update" }
+         }
          val updatedBucket = queries.getBucket(id.toLong()).executeAsOne()
          if (updatedBucket.version > UShort.MAX_VALUE.toLong()) {
             logcat { "Got over UShort_MAX, wrapping around" }
@@ -164,7 +167,6 @@ class BucketsyncRepositoryImpl(
 }
 
 // Matching PERSIST_DATA_MAX_LENGTH of the watch SDK
-private const val MAX_BUCKET_SIZE = 256
 private val BUCKET_UPDATE_DEBOUNCE = 100.milliseconds
 
 private val lastVersionKey = intPreferencesKey("bucketsync_last_version")

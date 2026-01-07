@@ -60,6 +60,6 @@ interface BucketSyncRepository {
 
    companion object {
       const val MAX_BUCKET_ID = 255
-      const val MAX_BUCKET_SIZE_BYTES = 256
+      const val MAX_BUCKET_SIZE_BYTES = 255
    }
 }

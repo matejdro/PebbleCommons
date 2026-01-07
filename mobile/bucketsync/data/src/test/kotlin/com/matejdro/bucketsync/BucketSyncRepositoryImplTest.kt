@@ -200,7 +200,7 @@ class BucketSyncRepositoryImplTest {
    }
 
    @Test
-   fun `Disallow adding buckets larger than 256 bytes`() = scope.runTest {
+   fun `Disallow adding buckets larger than 255 bytes`() = scope.runTest {
       repo.init(1)
 
       assertThrows<IllegalArgumentException> {
