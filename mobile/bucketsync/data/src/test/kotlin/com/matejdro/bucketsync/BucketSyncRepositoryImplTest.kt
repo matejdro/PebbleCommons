@@ -486,11 +486,11 @@ class BucketSyncRepositoryImplTest {
    fun `Repurpose oldest buckets when dynamic buckets runs out of pool`() = scope.runTest {
       repo.init(1, dynamicPool = 2..3)
 
-      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1)
-      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2)
-      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
-      repo.updateBucketDynamic("4", byteArrayOf(4), sortKey = -4)
-      repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5)
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1) // Will take free bucket 2
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2) // Will take free bucket 3
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3) // All buckets taken, repurpose 2
+      repo.updateBucketDynamic("4", byteArrayOf(4), sortKey = -4) // All buckets taken, repurpose 3
+      repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5) // All buckets taken, repurpose 2
       delay(1.seconds)
 
       val bucketsToUpdate = repo.awaitNextUpdate(0u)
@@ -501,6 +501,53 @@ class BucketSyncRepositoryImplTest {
          listOf(
             Bucket(2u, byteArrayOf(5)),
             Bucket(3u, byteArrayOf(4)),
+         )
+      )
+   }
+
+   @Test
+   fun `Repurpose null sort key first dynamic buckets runs out of pool`() = scope.runTest {
+      repo.init(1, dynamicPool = 2..3)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = null) // Will take free bucket 2
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2) // Will take free bucket 3
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3) // All buckets taken, repurpose 2
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         3u,
+         listOf(2u, 3u),
+         listOf(
+            Bucket(2u, byteArrayOf(3)),
+            Bucket(3u, byteArrayOf(2)),
+         )
+      )
+   }
+
+   @Test
+   fun `Repurpose blank buckets first dynamic buckets runs out of pool`() = scope.runTest {
+      repo.init(1, dynamicPool = 2..3)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = null) // Will take free bucket 2
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = null) // Will take free bucket 2
+      delay(1.seconds)
+
+      repo.deleteBucketDynamic("2")
+      delay(1.seconds)
+
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2) // Will take free bucket 3
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3) // All buckets taken, repurpose 2
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         5u,
+         listOf(2u, 3u),
+         listOf(
+            Bucket(2u, byteArrayOf(3)),
+            Bucket(3u, byteArrayOf(2)),
          )
       )
    }

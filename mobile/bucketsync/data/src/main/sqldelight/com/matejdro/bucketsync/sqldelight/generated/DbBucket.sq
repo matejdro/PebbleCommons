@@ -48,7 +48,7 @@ getBucketWithUpstreamId:
     SELECT id FROM dbBucket WHERE upstreamId = :id LIMIT 1;
 
 getOldestBucketInRange:
-    SELECT id FROM dbBucket WHERE id >= :minInclusive AND id <= :maxInclusive ORDER BY sortKey DESC, id DESC LIMIT 1;
+    SELECT id FROM dbBucket WHERE id >= :minInclusive AND id <= :maxInclusive ORDER BY data IS NOT NULL, sortKey IS NOT NULL, sortKey DESC, id ASC LIMIT 1;
 
 deleteAll:
     DELETE FROM dbBucket;
