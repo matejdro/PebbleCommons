@@ -9,6 +9,7 @@ sqldelight {
       create("Database") {
          packageName.set("com.matejdro.bucketsync.sqldelight.generated")
          schemaOutputDirectory.set(file("src/main/sqldelight/databases"))
+
       }
    }
 }
@@ -24,6 +25,7 @@ dependencies {
    implementation(libs.androidx.workManager)
    implementation(libs.okio)
    implementation(libs.pebblekit)
+   implementation(libs.sqldelight.android)
 
    testImplementation(projects.bucketsync.test)
    testImplementation(libs.kotlinova.core.test)
