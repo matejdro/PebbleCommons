@@ -12,5 +12,5 @@ fun PebbleDictionary.requireInt(key: UInt): Int {
 }
 
 fun PebbleDictionary.requireBytes(key: UInt): ByteArray {
-   return (this.getValue(key) as PebbleDictionaryItem.ByteArray).value
+   return (this.getValue(key) as PebbleDictionaryItem.Bytes).value
 }

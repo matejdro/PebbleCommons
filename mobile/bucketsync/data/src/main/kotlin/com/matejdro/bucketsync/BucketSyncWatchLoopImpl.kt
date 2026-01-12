@@ -46,7 +46,7 @@ class BucketSyncWatchLoopImpl(
          if (initialUpdate == null) {
             bucketsyncBuffer.writeUByte(SYNC_STATUS_UP_TO_DATE)
 
-            val packet = helloPacketBase + (2u to PebbleDictionaryItem.ByteArray(bucketsyncBuffer.readByteArray()))
+            val packet = helloPacketBase + (2u to PebbleDictionaryItem.Bytes(bucketsyncBuffer.readByteArray()))
 
             packetQueue.sendPacket(
                packet,
@@ -71,7 +71,7 @@ class BucketSyncWatchLoopImpl(
 
             logcat { "Extra packets: ${extraPackets.size}" }
 
-            val firstPacket = helloPacketBase + (2u to PebbleDictionaryItem.ByteArray(bucketsyncBuffer.readByteArray()))
+            val firstPacket = helloPacketBase + (2u to PebbleDictionaryItem.Bytes(bucketsyncBuffer.readByteArray()))
             packetQueue.sendPacket(
                firstPacket,
                PRIORITY_SYNC
@@ -121,7 +121,7 @@ class BucketSyncWatchLoopImpl(
          packetQueue.sendPacket(
             mapOf(
                0u to PebbleDictionaryItem.UInt8(2u),
-               1u to PebbleDictionaryItem.ByteArray(bucketsyncBuffer.readByteArray()),
+               1u to PebbleDictionaryItem.Bytes(bucketsyncBuffer.readByteArray()),
             ),
             PRIORITY_SYNC
          )

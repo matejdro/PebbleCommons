@@ -68,7 +68,7 @@ private fun createAdditionalPackets(
       additionalPackets.add(
          mapOf(
             0u to PebbleDictionaryItem.UInt8(3u),
-            1u to PebbleDictionaryItem.ByteArray(nextPacketBuffer.readByteArray()),
+            1u to PebbleDictionaryItem.Bytes(nextPacketBuffer.readByteArray()),
          ),
       )
 
