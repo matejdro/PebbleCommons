@@ -1,5 +1,7 @@
 #include "bluetooth.h"
 
+#include "commons/structures/vec.h"
+
 uint32_t appmessage_max_size = 0;
 bool is_currently_sending_data = false;
 bool is_phone_connected = true;
@@ -9,7 +11,7 @@ const uint16_t PROTOCOL_VERSION = 1;
 
 static AppTimer* reconnect_init_timer = NULL;
 
-static void (*sending_finish_callback)(bool success) = NULL;
+static void (**sending_finish_callbacks)(bool);
 
 static void (*phone_connected_change_callback)() = NULL;
 
@@ -31,6 +33,8 @@ static void on_received_data(DictionaryIterator* iterator, void* context);
 
 void bluetooth_init()
 {
+    sending_finish_callbacks = vector_create();
+
     appmessage_max_size = app_message_inbox_size_maximum();
     if (appmessage_max_size > 4096)
         appmessage_max_size = 4096; //Limit inbox size to conserve RAM.
@@ -63,6 +67,18 @@ static void on_received_data(DictionaryIterator* iterator, void* context)
     receive_watch_packet_callback(iterator);
 }
 
+static void trigger_sending_finish_callbacks(const bool success)
+{
+    int num_callbacks = vector_size(sending_finish_callbacks);
+    for (int i = 0; i < num_callbacks; i++)
+    {
+        void (*localCallback)(bool success) = sending_finish_callbacks[i];
+        localCallback(success);
+    }
+
+    vector_clear(sending_finish_callbacks);
+}
+
 static void on_sent_data(DictionaryIterator* iterator, void* context)
 {
     void (*local_sending_now_callback)() = sending_now_callback;
@@ -72,11 +88,7 @@ static void on_sent_data(DictionaryIterator* iterator, void* context)
         local_sending_now_callback();
     }
 
-    void (*localCallback)(bool success) = sending_finish_callback;
-    if (localCallback != NULL)
-    {
-        localCallback(true);
-    }
+    trigger_sending_finish_callbacks(true);
 }
 
 void bluetooth_app_message_outbox_send()
@@ -97,7 +109,6 @@ void bluetooth_app_message_outbox_send()
 
 static void on_sending_failed(DictionaryIterator* iterator, const AppMessageResult reason, void* context)
 {
-    void (*local_sending_finish_callback)(bool success) = sending_finish_callback;
     void (*local_sending_error_callback)() = sending_error_callback;
 
     void (*local_sending_now_callback)() = sending_now_callback;
@@ -110,10 +121,7 @@ static void on_sending_failed(DictionaryIterator* iterator, const AppMessageResu
     switch (reason)
     {
     case APP_MSG_OK:
-        if (local_sending_finish_callback != NULL)
-        {
-            local_sending_finish_callback(true);
-        }
+        trigger_sending_finish_callbacks(true);
         break;
     case APP_MSG_BUSY:
     case APP_MSG_SEND_REJECTED:
@@ -127,10 +135,7 @@ static void on_sending_failed(DictionaryIterator* iterator, const AppMessageResu
     case APP_MSG_CLOSED:
     case APP_MSG_INTERNAL_ERROR:
     case APP_MSG_INVALID_STATE:
-        if (local_sending_finish_callback != NULL)
-        {
-            local_sending_finish_callback(false);
-        }
+        trigger_sending_finish_callbacks(false);
         got_sending_error = true;
         if (local_sending_error_callback != NULL)
         {
@@ -139,10 +144,7 @@ static void on_sending_failed(DictionaryIterator* iterator, const AppMessageResu
         break;
     case APP_MSG_NOT_CONNECTED:
     case APP_MSG_SEND_TIMEOUT:
-        if (local_sending_finish_callback != NULL)
-        {
-            local_sending_finish_callback(false);
-        }
+        trigger_sending_finish_callbacks(false);
 
         is_phone_connected = false;
         void (*local_phone_connected)() = phone_connected_change_callback;
@@ -189,7 +191,9 @@ static void on_connection_changed(const bool status)
 
 void bluetooth_register_sending_finish(void (*callback)(bool success))
 {
-    sending_finish_callback = callback;
+    // Vector library does not properly support pointers to callbacks in short syntax, so we must use long add syntax
+    // ReSharper disable once CppRedundantCastExpression
+    *(void (**)(bool)) _vector_add_dst((void*) &sending_finish_callbacks, sizeof(void (*)(bool))) = callback;
 }
 
 void bluetooth_register_phone_connected_change_callback(void (*callback)())
@@ -207,12 +211,12 @@ void bluetooth_register_sending_error_status_callback(void (*callback)())
     sending_error_callback = callback;
 }
 
-void bluetooth_register_receive_watch_packet(void(* callback)(const DictionaryIterator*))
+void bluetooth_register_receive_watch_packet(void (*callback)(const DictionaryIterator*))
 {
     receive_watch_packet_callback = callback;
 }
 
-void bluetooth_register_reconnect_callback(void(* callback)())
+void bluetooth_register_reconnect_callback(void (*callback)())
 {
     reconnect_callback = callback;
 }
