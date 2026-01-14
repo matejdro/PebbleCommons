@@ -7,8 +7,6 @@ bool is_currently_sending_data = false;
 bool is_phone_connected = true;
 bool got_sending_error = false;
 
-const uint16_t PROTOCOL_VERSION = 1;
-
 static AppTimer* reconnect_init_timer = NULL;
 
 static void (**sending_finish_callbacks)(bool);
