@@ -46,7 +46,7 @@ interface BucketSyncRepository {
     *
     * This will increment the internal version - this bucket will be included in the next update.
     */
-   suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long? = null)
+   suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long? = null): Int
 
    /**
     * Delete data of the bucket with the upstream id [upstreamId] from the watch

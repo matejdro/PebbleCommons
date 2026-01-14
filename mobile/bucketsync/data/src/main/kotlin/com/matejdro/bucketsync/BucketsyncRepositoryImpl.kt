@@ -127,7 +127,7 @@ class BucketsyncRepositoryImpl(
       backgroundSyncNotifier.notifyDataChanged()
    }
 
-   override suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long?) = withIO<Unit> {
+   override suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long?) = withIO<Int> {
       val existingBucket = queries.getBucketWithUpstreamId(upstreamId).executeAsOneOrNull()
 
       val targetBucketId = if (existingBucket != null) {
@@ -145,6 +145,7 @@ class BucketsyncRepositoryImpl(
       }
 
       updateBucket(targetBucketId.toUByte(), data, sortKey, upstreamId)
+      targetBucketId.toInt()
    }
 
    override suspend fun deleteBucketDynamic(upstreamId: String) = withIO<Unit> {

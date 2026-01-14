@@ -445,8 +445,8 @@ class BucketSyncRepositoryImplTest {
    fun `Report dynamically added buckets when updating from version 0`() = scope.runTest {
       repo.init(1)
 
-      repo.updateBucketDynamic("1", byteArrayOf(1))
-      repo.updateBucketDynamic("2", byteArrayOf(2))
+      repo.updateBucketDynamic("1", byteArrayOf(1)) shouldBe 1
+      repo.updateBucketDynamic("2", byteArrayOf(2)) shouldBe 2
       delay(1.seconds)
 
       val bucketsToUpdate = repo.awaitNextUpdate(0u)
@@ -486,11 +486,11 @@ class BucketSyncRepositoryImplTest {
    fun `Repurpose oldest buckets when dynamic buckets runs out of pool`() = scope.runTest {
       repo.init(1, dynamicPool = 2..3)
 
-      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1) // Will take free bucket 2
-      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2) // Will take free bucket 3
-      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3) // All buckets taken, repurpose 2
-      repo.updateBucketDynamic("4", byteArrayOf(4), sortKey = -4) // All buckets taken, repurpose 3
-      repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5) // All buckets taken, repurpose 2
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1) shouldBe 2 // Will take free bucket 2
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2) shouldBe 3 // Will take free bucket 3
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3) shouldBe 2 // All buckets taken, repurpose 2
+      repo.updateBucketDynamic("4", byteArrayOf(4), sortKey = -4) shouldBe 3 // All buckets taken, repurpose 3
+      repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5) shouldBe 2 // All buckets taken, repurpose 2
       delay(1.seconds)
 
       val bucketsToUpdate = repo.awaitNextUpdate(0u)
