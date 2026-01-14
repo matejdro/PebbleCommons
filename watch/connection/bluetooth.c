@@ -159,8 +159,10 @@ static void reconnect_init_callback(void* context)
     reconnect_init_timer = NULL;
 
     // When watch reconnects, send hello again to get synced data while we were offline
-    bluetooth_register_sending_finish(NULL);
-    reconnect_callback();
+     if (reconnect_callback != NULL)
+    {
+        reconnect_callback();
+    }
 }
 
 static void on_connection_changed(const bool status)
