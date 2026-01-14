@@ -52,16 +52,7 @@ void bluetooth_init()
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
 static void on_received_data(DictionaryIterator* iterator, void* context)
 {
-    if (!is_phone_connected)
-    {
-        is_phone_connected = true;
-        void (*local_phone_connected)() = phone_connected_change_callback;
-        if (local_phone_connected != NULL)
-        {
-            local_phone_connected();
-        }
-    }
-
+    on_connection_changed(true);
     receive_watch_packet_callback(iterator);
 }
 
@@ -87,6 +78,8 @@ static void on_sent_data(DictionaryIterator* iterator, void* context)
     }
 
     trigger_sending_finish_callbacks(true);
+
+    on_connection_changed(true);
 }
 
 void bluetooth_app_message_outbox_send()
@@ -144,12 +137,7 @@ static void on_sending_failed(DictionaryIterator* iterator, const AppMessageResu
     case APP_MSG_SEND_TIMEOUT:
         trigger_sending_finish_callbacks(false);
 
-        is_phone_connected = false;
-        void (*local_phone_connected)() = phone_connected_change_callback;
-        if (local_phone_connected != NULL)
-        {
-            local_phone_connected();
-        }
+        on_connection_changed(false);
         break;
     }
 }
@@ -181,11 +169,14 @@ static void on_connection_changed(const bool status)
         }
     }
 
-    is_phone_connected = status;
-    void (*local_phone_connected)() = phone_connected_change_callback;
-    if (local_phone_connected != NULL)
+    if (status != is_phone_connected)
     {
-        local_phone_connected();
+        is_phone_connected = status;
+        void (*local_phone_connected)() = phone_connected_change_callback;
+        if (local_phone_connected != NULL)
+        {
+            local_phone_connected();
+        }
     }
 }
 
