@@ -13,6 +13,14 @@ sqldelight {
       }
    }
 }
+
+afterEvaluate {
+   tasks.named("verifyDebugDatabaseMigration") {
+      // Workaround for the https://github.com/cashapp/sqldelight/issues/5115
+      mustRunAfter("generateDebugDatabaseSchema")
+   }
+}
+
 dependencies {
    api(projects.bluetoothCommon)
    api(projects.bucketsync.api)
