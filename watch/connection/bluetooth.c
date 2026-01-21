@@ -24,6 +24,7 @@ static void (*reconnect_callback)() = NULL;
 static void on_sent_data(DictionaryIterator* iterator, void* context);
 
 static void on_connection_changed(bool status);
+static void on_connection_changed_from_os(const bool status);
 
 static void on_sending_failed(DictionaryIterator* iterator, AppMessageResult reason, void* context);
 
@@ -39,7 +40,7 @@ void bluetooth_init()
 
     connection_service_peek_pebble_app_connection();
     const ConnectionHandlers connection_handlers = {
-        .pebble_app_connection_handler = on_connection_changed
+        .pebble_app_connection_handler = on_connection_changed_from_os
 
     };
     connection_service_subscribe(connection_handlers);
@@ -152,6 +153,17 @@ static void reconnect_init_callback(void* context)
         reconnect_callback();
     }
 }
+
+static void on_connection_changed_from_os(const bool status)
+{
+    if (is_phone_connected && !status)
+    {
+        vibes_double_pulse();
+    }
+
+    on_connection_changed(status);
+}
+
 
 static void on_connection_changed(const bool status)
 {
