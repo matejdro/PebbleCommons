@@ -7,5 +7,6 @@ interface BucketSyncWatchLoop {
       helloPacketBase: PebbleDictionary,
       initialWatchVersion: UShort,
       watchBufferSize: Int,
+      onBucketsChanged: suspend () -> Unit = {},
    )
 }

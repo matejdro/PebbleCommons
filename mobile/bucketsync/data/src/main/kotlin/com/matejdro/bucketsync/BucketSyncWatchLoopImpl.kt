@@ -37,6 +37,7 @@ class BucketSyncWatchLoopImpl(
       helloPacketBase: PebbleDictionary,
       initialWatchVersion: UShort,
       watchBufferSize: Int,
+      onBucketsChanged: suspend () -> Unit,
    ) {
       bucketSyncJob?.cancel()
       bucketSyncJob = coroutineScope.launch {
@@ -89,7 +90,7 @@ class BucketSyncWatchLoopImpl(
             backgroundSyncNotifier.notifyWatchFullySynced(watch.value)
          }
 
-         observeForFutureSyncs(watchVersion, bucketsyncBuffer, watchBufferSize)
+         observeForFutureSyncs(watchVersion, bucketsyncBuffer, watchBufferSize, onBucketsChanged)
       }
    }
 
@@ -97,6 +98,7 @@ class BucketSyncWatchLoopImpl(
       initialWatchVersion: UShort,
       bucketsyncBuffer: Buffer,
       watchBufferSize: Int,
+      onBucketsChanged: suspend () -> Unit,
    ) {
       var watchVersion = initialWatchVersion
 
@@ -135,6 +137,7 @@ class BucketSyncWatchLoopImpl(
 
          watchVersion = nextUpdate.toVersion
          backgroundSyncNotifier.notifyWatchFullySynced(watch.value)
+         onBucketsChanged()
       }
    }
 }
