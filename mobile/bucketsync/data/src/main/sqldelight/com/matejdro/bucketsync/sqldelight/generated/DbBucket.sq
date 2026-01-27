@@ -18,8 +18,8 @@ insert:
     (SELECT 1 FROM dbBucket WHERE id = :id AND data = :data AND sortKey = :sortKey AND upstreamId = :upstreamId);
 
 clearBucket:
-   REPLACE INTO dbBucket (id, version, data, sortKey)
-   VALUES (:id, (SELECT COALESCE(MAX(version) + 1, 1) FROM dbBucket), NULL, NULL);
+   REPLACE INTO dbBucket (id, version, data)
+   VALUES (:id, (SELECT COALESCE(MAX(version) + 1, 1) FROM dbBucket), NULL);
 
 clearBuckets:
    UPDATE dbBucket
@@ -37,6 +37,9 @@ getUpdatedBuckets:
 
 getActiveBuckets:
    SELECT id FROM dbBucket WHERE data IS NOT NULL ORDER BY sortKey ASC, id ASC LIMIT :limit;
+
+getPotentialActiveBuckets:
+   SELECT id FROM dbBucket ORDER BY sortKey ASC, id ASC LIMIT :limit;
 
 getLatestVersion:
    SELECT MAX(version) FROM dbBucket;

@@ -107,17 +107,30 @@ class BucketsyncRepositoryImpl(
 
    private fun createBucketUpdate(requestVersion: UShort, newVersion: UShort, maxActiveBuckets: Int): BucketUpdate {
       val activeBuckets = queries.getActiveBuckets(maxActiveBuckets.toLong()).executeAsList().map { it.toUShort() }
+      val potentialActiveBuckets = queries.getPotentialActiveBuckets(
+         maxActiveBuckets.toLong()
+      ).executeAsList().map { it.toUShort() }
+
+
       val bucketsToUpdate = queries.getUpdatedBuckets(
          requestVersion.toLong(),
          activeBuckets.map { it.toLong() }
       ).executeAsList()
+
+      // If buckets became inactive and then active again, they were deleted from the watch
+      // Even though the contents has not changed. we have to send them along
+      val extraBucketsToTransmit = (activeBuckets - potentialActiveBuckets).mapNotNull { id ->
+         val data = queries.getBucket(id.toLong()).executeAsOne().data_ ?: return@mapNotNull null
+
+         Bucket(id.toUByte(), data)
+      }
 
       logcat { "Active buckets: $activeBuckets, bucketsToUpdate: ${bucketsToUpdate.map { it.id }}" }
 
       return BucketUpdate(
          newVersion,
          activeBuckets,
-         bucketsToUpdate.map { Bucket(it.id.toUByte(), it.data_) }
+         bucketsToUpdate.map { Bucket(it.id.toUByte(), it.data_) } + extraBucketsToTransmit
       )
    }
 

@@ -664,6 +664,31 @@ class BucketSyncRepositoryImplTest {
 
       notifier.dataChangeNotified shouldBe true
    }
+
+   @Test
+   fun `Send data for the bucket after it becomes inactive and then active again`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1)
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2)
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
+      delay(1.seconds)
+
+      repo.awaitNextUpdate(0u, maxActiveBuckets = 2).also { println(it) }
+
+      repo.deleteBucketDynamic("3")
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(3u, maxActiveBuckets = 2)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         4u,
+         listOf(2u, 1u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+         )
+      )
+   }
 }
 
 private fun createTestBucketQueries(
