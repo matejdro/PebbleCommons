@@ -674,7 +674,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
       delay(1.seconds)
 
-      repo.awaitNextUpdate(0u, maxActiveBuckets = 2).also { println(it) }
+      repo.awaitNextUpdate(0u, maxActiveBuckets = 2)
 
       repo.deleteBucketDynamic("3")
       delay(1.seconds)

@@ -111,7 +111,6 @@ class BucketsyncRepositoryImpl(
          maxActiveBuckets.toLong()
       ).executeAsList().map { it.toUShort() }
 
-
       val bucketsToUpdate = queries.getUpdatedBuckets(
          requestVersion.toLong(),
          activeBuckets.map { it.toLong() }
