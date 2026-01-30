@@ -17,7 +17,7 @@ interface BucketSyncRepository {
     * Update bucket data for the bucket [id]. This will increment the internal version - this bucket will be included
     * in the next update.
     */
-   suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long? = null)
+   suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long? = null, flags: UByte = 0u)
 
    /**
     * Method will check whether a different version than the [currentVersion] is available. It will return a BucketUpdate
@@ -46,7 +46,7 @@ interface BucketSyncRepository {
     *
     * This will increment the internal version - this bucket will be included in the next update.
     */
-   suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long? = null): Int
+   suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long? = null, flags: UByte = 0u): Int
 
    /**
     * Delete data of the bucket with the upstream id [upstreamId] from the watch
@@ -57,6 +57,14 @@ interface BucketSyncRepository {
     * Delete all buckets from the dynamic pool
     */
    suspend fun clearAllDynamic()
+
+   /**
+    * Update flags for the bucket [id]. This will NOT increment the internal version.
+    *
+    * New flags will only be transmitted if bucket drops out from the active set (gets deleted from the watch) and then
+    * becomes active again and gets re-transmitted.
+    */
+   suspend fun updateBucketFlagsSilently(id: UByte, flags: UByte)
 
    companion object {
       const val MAX_BUCKET_ID = 255

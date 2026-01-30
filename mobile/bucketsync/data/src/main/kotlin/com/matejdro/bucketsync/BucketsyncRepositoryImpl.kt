@@ -46,29 +46,30 @@ class BucketsyncRepositoryImpl(
       }
    }
 
-   override suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?) {
-      updateBucket(id, data, sortKey, null)
+   override suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, flags: UByte) {
+      updateBucket(id, data, sortKey, null, flags)
    }
 
-   private suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, upstreamId: String?) = withIO<Unit> {
-      queries.transaction {
-         require(data.size <= BucketSyncRepository.MAX_BUCKET_SIZE_BYTES) {
-            "bucket size (${data.size}) must be at most 255 bytes"
+   private suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, upstreamId: String?, flags: UByte) =
+      withIO<Unit> {
+         queries.transaction {
+            require(data.size <= BucketSyncRepository.MAX_BUCKET_SIZE_BYTES) {
+               "bucket size (${data.size}) must be at most 255 bytes"
+            }
+            logcat { "Update bucket $id (${data.size} bytes)" }
+            val inserted = queries.insert(id.toLong(), data, sortKey, upstreamId, flags.toLong()).value
+            if (inserted == 0L) {
+               logcat { "Content was identical, skipping update" }
+            }
+            val updatedBucket = queries.getBucket(id.toLong()).executeAsOne()
+            if (updatedBucket.version > UShort.MAX_VALUE.toLong()) {
+               logcat { "Got over UShort_MAX, wrapping around" }
+               queries.resetAllVersions()
+            }
          }
-         logcat { "Update bucket $id (${data.size} bytes)" }
-         val inserted = queries.insert(id.toLong(), data, sortKey, upstreamId).value
-         if (inserted == 0L) {
-            logcat { "Content was identical, skipping update" }
-         }
-         val updatedBucket = queries.getBucket(id.toLong()).executeAsOne()
-         if (updatedBucket.version > UShort.MAX_VALUE.toLong()) {
-            logcat { "Got over UShort_MAX, wrapping around" }
-            queries.resetAllVersions()
-         }
+
+         backgroundSyncNotifier.notifyDataChanged()
       }
-
-      backgroundSyncNotifier.notifyDataChanged()
-   }
 
    override suspend fun awaitNextUpdate(currentVersion: UShort, maxActiveBuckets: Int): BucketUpdate = withIO {
       logcat { "Await next update from $currentVersion" }
@@ -106,19 +107,20 @@ class BucketsyncRepositoryImpl(
    }
 
    private fun createBucketUpdate(requestVersion: UShort, newVersion: UShort, maxActiveBuckets: Int): BucketUpdate {
-      val activeBuckets = queries.getActiveBuckets(maxActiveBuckets.toLong()).executeAsList().map { it.toUShort() }
+      val activeBuckets =
+         queries.getActiveBuckets(maxActiveBuckets.toLong()).executeAsList().map { it.id.toUShort() to it.flags.toUByte() }
       val potentialActiveBuckets = queries.getPotentialActiveBuckets(
          maxActiveBuckets.toLong()
       ).executeAsList().map { it.toUShort() }
 
       val bucketsToUpdate = queries.getUpdatedBuckets(
          requestVersion.toLong(),
-         activeBuckets.map { it.toLong() }
+         activeBuckets.map { (id, _) -> id.toLong() },
       ).executeAsList()
 
       // If buckets became inactive and then active again, they were deleted from the watch
       // Even though the contents has not changed. we have to send them along
-      val extraBucketsToTransmit = (activeBuckets - potentialActiveBuckets).mapNotNull { id ->
+      val extraBucketsToTransmit = (activeBuckets.map { it.first } - potentialActiveBuckets).mapNotNull { id ->
          val data = queries.getBucket(id.toLong()).executeAsOne().data_ ?: return@mapNotNull null
 
          Bucket(id.toUByte(), data)
@@ -128,8 +130,9 @@ class BucketsyncRepositoryImpl(
 
       return BucketUpdate(
          newVersion,
-         activeBuckets,
-         bucketsToUpdate.map { Bucket(it.id.toUByte(), it.data_) } + extraBucketsToTransmit
+         activeBuckets.map { it.first },
+         bucketsToUpdate.map { Bucket(it.id.toUByte(), it.data_) } + extraBucketsToTransmit,
+         activeBuckets.map { it.second },
       )
    }
 
@@ -139,26 +142,27 @@ class BucketsyncRepositoryImpl(
       backgroundSyncNotifier.notifyDataChanged()
    }
 
-   override suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long?) = withIO<Int> {
-      val existingBucket = queries.getBucketWithUpstreamId(upstreamId).executeAsOneOrNull()
+   override suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long?, flags: UByte): Int =
+      withIO<Int> {
+         val existingBucket = queries.getBucketWithUpstreamId(upstreamId).executeAsOneOrNull()
 
-      val targetBucketId = if (existingBucket != null) {
-         existingBucket
-      } else {
-         val nextBucketId = queries.getMaxSequenceId().executeAsOneOrNull()?.MAX.let { it ?: 0 } + 1
-
-         if (nextBucketId < dynamicBucketPool.first) {
-            dynamicBucketPool.first.toLong()
-         } else if (nextBucketId > dynamicBucketPool.last) {
-            queries.getOldestBucketInRange(dynamicBucketPool.first.toLong(), dynamicBucketPool.last.toLong()).executeAsOne()
+         val targetBucketId = if (existingBucket != null) {
+            existingBucket
          } else {
-            nextBucketId
-         }
-      }
+            val nextBucketId = queries.getMaxSequenceId().executeAsOneOrNull()?.MAX.let { it ?: 0 } + 1
 
-      updateBucket(targetBucketId.toUByte(), data, sortKey, upstreamId)
-      targetBucketId.toInt()
-   }
+            if (nextBucketId < dynamicBucketPool.first) {
+               dynamicBucketPool.first.toLong()
+            } else if (nextBucketId > dynamicBucketPool.last) {
+               queries.getOldestBucketInRange(dynamicBucketPool.first.toLong(), dynamicBucketPool.last.toLong()).executeAsOne()
+            } else {
+               nextBucketId
+            }
+         }
+
+         updateBucket(targetBucketId.toUByte(), data, sortKey, upstreamId, flags)
+         targetBucketId.toInt()
+      }
 
    override suspend fun deleteBucketDynamic(upstreamId: String) = withIO<Unit> {
       val existingBucket = queries.getBucketWithUpstreamId(upstreamId).executeAsOneOrNull()
@@ -178,6 +182,10 @@ class BucketsyncRepositoryImpl(
       }
 
       backgroundSyncNotifier.notifyDataChanged()
+   }
+
+   override suspend fun updateBucketFlagsSilently(id: UByte, flags: UByte) = withIO<Unit> {
+      queries.updateFlagsSilently(flags.toLong(), id.toLong()).await()
    }
 }
 

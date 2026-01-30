@@ -101,9 +101,9 @@ private fun createFirstPacket(
 
    firstPacketBuffer.writeUShort(update.toVersion)
    firstPacketBuffer.writeUByte(update.activeBuckets.size.toUByte())
-   for (activeBucket in update.activeBuckets) {
-      firstPacketBuffer.writeUByte(activeBucket.toUByte())
-      firstPacketBuffer.writeUByte(0u)
+   for ((id, flags) in update.activeBuckets.zip(update.activeBucketFlags)) {
+      firstPacketBuffer.writeUByte(id.toUByte())
+      firstPacketBuffer.writeUByte(flags)
    }
 
    for (updatedBucket in bucketsToUpdate.take(bucketsToSendInFirstPacket)) {

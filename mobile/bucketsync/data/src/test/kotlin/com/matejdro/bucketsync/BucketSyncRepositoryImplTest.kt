@@ -10,6 +10,7 @@ import com.matejdro.bucketsync.sqldelight.generated.Database
 import com.matejdro.bucketsync.sqldelight.generated.DbBucket
 import com.matejdro.bucketsync.sqldelight.generated.DbBucketQueries
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -302,7 +303,7 @@ class BucketSyncRepositoryImplTest {
    @Test
    fun `When version passes 65535 (ushort max), it should wrap around back to one`() = scope.runTest {
       db.insertRaw(
-         DbBucket(1, byteArrayOf(1), 65535, null, null)
+         DbBucket(1, byteArrayOf(1), 65535, null, null, 0)
       )
 
       repo.init(1)
@@ -687,6 +688,93 @@ class BucketSyncRepositoryImplTest {
          listOf(
             Bucket(1u, byteArrayOf(1)),
          )
+      )
+   }
+
+   @Test
+   fun `Report bucket metadata buckets when updating buckets`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1), flags = 12u)
+      repo.updateBucket(2u, byteArrayOf(2), flags = 13u)
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         toVersion = 2u,
+         activeBuckets = listOf(1u, 2u),
+         activeBucketFlags = listOf(12u, 13u),
+         bucketsToUpdate = listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(2))
+         )
+      )
+   }
+
+   @Test
+   fun `Report bucket metadata buckets when updating buckets dynamically`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1), flags = 77u) shouldBe 1
+      repo.updateBucketDynamic("2", byteArrayOf(2), flags = 125u) shouldBe 2
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         toVersion = 2u,
+         activeBuckets = listOf(1u, 2u),
+         activeBucketFlags = listOf(77u, 125u),
+         bucketsToUpdate = listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(2))
+         )
+      )
+
+      notifier.dataChangeNotified shouldBe true
+   }
+
+   @Test
+   fun `Do not create an update when flag is updated silently`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1), flags = 12u)
+      repo.updateBucket(2u, byteArrayOf(2), flags = 13u)
+      delay(1.seconds)
+
+      repo.awaitNextUpdate(0u)
+
+      repo.updateBucketFlagsSilently(1u, 12u)
+      delay(1.seconds)
+
+      repo.checkForNextUpdate(2u).shouldBeNull()
+   }
+
+   @Test
+   fun `Send silently updated flags of the bucket after it becomes inactive and then active again`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1), sortKey = -1)
+      repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2)
+      repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
+      delay(1.seconds)
+
+      repo.awaitNextUpdate(0u, maxActiveBuckets = 2)
+
+      repo.updateBucketFlagsSilently(1u, 12u)
+      repo.deleteBucketDynamic("3")
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(3u, maxActiveBuckets = 2)
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         toVersion = 4u,
+         activeBuckets = listOf(2u, 1u),
+         activeBucketFlags = listOf(0u, 12u),
+         bucketsToUpdate = listOf(
+            Bucket(1u, byteArrayOf(1)),
+         ),
       )
    }
 }

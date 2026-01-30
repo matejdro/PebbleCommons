@@ -340,6 +340,71 @@ class BucketSyncWatchLoopImplTest {
       watchappOpenController.isNextWatchappOpenForAutoSync() shouldBe false
    }
 
+   @Test
+   fun `Send bucket flags with bucket update packet`() = scope.runTest {
+      bucketSyncRepository.updateBucket(1u, byteArrayOf(1), flags = 56u)
+      bucketSyncRepository.updateBucket(2u, byteArrayOf(2), flags = 75u)
+
+      init()
+      loop.sendFirstPacketAndStartLoop(
+         mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
+         0u,
+         30
+      )
+      runCurrent()
+
+      sender.sentData.shouldContainExactly(
+         mapOf(
+            0u to PebbleDictionaryItem.UInt8(1u),
+            2u to PebbleDictionaryItem.Bytes(
+               byteArrayOf(
+                  1, // Status
+                  0, 2, // Latest version
+                  2, // Num of active buckets
+                  1, 56, // Metadata for bucket 1
+                  2, 75, // Metadata for bucket 2
+                  1, 1, 1, // Sync data for bucket 1
+                  2, 1, 2, // Sync data for bucket 2
+               )
+            ),
+         )
+      )
+   }
+
+   @Test
+   fun `Send new sync packet with new flags if buckets update after initial sync packet `() = scope.runTest {
+      init()
+      loop.sendFirstPacketAndStartLoop(
+         mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
+         0u,
+         52
+      )
+      runCurrent()
+
+      sender.sentPackets.clear()
+
+      bucketSyncRepository.updateBucket(1u, byteArrayOf(1), flags = 33u)
+      bucketSyncRepository.updateBucket(2u, byteArrayOf(2), flags = 89u)
+      delay(1.seconds)
+
+      sender.sentData.shouldContainExactly(
+         mapOf(
+            0u to PebbleDictionaryItem.UInt8(2u),
+            1u to PebbleDictionaryItem.Bytes(
+               byteArrayOf(
+                  1, // Status
+                  0, 2, // Latest version
+                  2, // Num of active buckets
+                  1, 33, // Metadata for bucket 1
+                  2, 89, // Metadata for bucket 2
+                  1, 1, 1, // Sync data for bucket 1
+                  2, 1, 2, // Sync data for bucket 2
+               )
+            ),
+         )
+      )
+   }
+
    private fun init() {
       scope.backgroundScope.launch { packetQueue.runQueue() }
    }

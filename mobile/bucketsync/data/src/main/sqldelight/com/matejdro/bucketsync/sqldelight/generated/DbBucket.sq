@@ -3,19 +3,24 @@ CREATE TABLE dbBucket (
     data BLOB,
     version INTEGER NOT NULL,
     sortKey INTEGER DEFAULT NULL,
-    upstreamId TEXT DEFAULT NULL
+    upstreamId TEXT DEFAULT NULL,
+    flags INTEGER NOT NULL DEFAULT 0
 );
 
 insert:
-   REPLACE INTO dbBucket (id, version, data, sortKey, upstreamId)
+   REPLACE INTO dbBucket (id, version, data, sortKey, upstreamId, flags)
    SELECT
     :id,
     (SELECT COALESCE(MAX(version) + 1, 1) FROM dbBucket),
     :data,
     :sortKey,
-    :upstreamId
+    :upstreamId,
+    :flags
    WHERE NOT EXISTS
     (SELECT 1 FROM dbBucket WHERE id = :id AND data = :data AND sortKey = :sortKey AND upstreamId = :upstreamId);
+
+updateFlagsSilently:
+    UPDATE dbBucket SET flags = :flags WHERE id = :id;
 
 clearBucket:
    REPLACE INTO dbBucket (id, version, data)
@@ -36,7 +41,7 @@ getUpdatedBuckets:
    SELECT * FROM dbBucket WHERE version > :oldVersion AND data IS NOT NULL AND id IN :allowedBuckets;
 
 getActiveBuckets:
-   SELECT id FROM dbBucket WHERE data IS NOT NULL ORDER BY sortKey ASC, id ASC LIMIT :limit;
+   SELECT id, flags FROM dbBucket WHERE data IS NOT NULL ORDER BY sortKey ASC, id ASC LIMIT :limit;
 
 getPotentialActiveBuckets:
    SELECT id FROM dbBucket ORDER BY sortKey ASC, id ASC LIMIT :limit;

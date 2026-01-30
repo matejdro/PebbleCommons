@@ -4,6 +4,7 @@ data class BucketUpdate(
    val toVersion: UShort,
    val activeBuckets: List<UShort>,
    val bucketsToUpdate: List<Bucket>,
+   val activeBucketFlags: List<UByte> = List(activeBuckets.size) { 0u },
 )
 
 data class Bucket(
