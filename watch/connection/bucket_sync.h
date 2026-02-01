@@ -20,6 +20,7 @@ BucketList;
 
 extern uint16_t bucket_sync_current_version;
 extern bool bucket_sync_is_currently_syncing;
+extern bool close_after_sync;
 
 void bucket_sync_init();
 
@@ -65,3 +66,5 @@ void bucket_sync_register_syncing_status_changed_callback(void (*callback)());
 
 void bucket_sync_on_start_received(const uint8_t* data, size_t data_size);
 void bucket_sync_on_next_packet_received(const uint8_t* data, size_t data_size);
+
+void bucket_sync_register_bucket_deleted_callback(void (*callback)(uint8_t));

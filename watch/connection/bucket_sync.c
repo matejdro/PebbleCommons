@@ -25,6 +25,8 @@ static uint16_t bucket_sync_pending_next_version = 0;
 bool bucket_sync_is_currently_syncing = true;
 bool close_after_sync = false;
 
+static void (*bucket_deleted_callback)(uint8_t) = NULL;
+
 static uint32_t get_bucket_persist_key(uint8_t bucket_id);
 static void delete_inactive_buckets(const uint8_t* data, const uint8_t new_active_buckets);
 static void save_bucket_data(const uint8_t* data, size_t data_size, size_t position);
@@ -70,7 +72,12 @@ void bucket_sync_init()
 
         for (int i = 0; i < buckets.count; i++)
         {
-            persist_delete(get_bucket_persist_key(buckets.data[i].id));
+            const uint8_t bucket_id = buckets.data[i].id;
+            persist_delete(get_bucket_persist_key(bucket_id));
+            if (bucket_deleted_callback != NULL)
+            {
+                bucket_deleted_callback(bucket_id);
+            }
         }
         buckets.count = 0;
         persist_delete(FILE_BUCKET_SYNC_VERSION);
@@ -269,6 +276,10 @@ static void delete_inactive_buckets(const uint8_t* data, const uint8_t new_activ
         if (!bucket_exists)
         {
             persist_delete(get_bucket_persist_key(old_bucket_id));
+            if (bucket_deleted_callback != NULL)
+            {
+                bucket_deleted_callback(old_bucket_id);
+            }
         }
     }
 }
@@ -293,4 +304,8 @@ void bucket_sync_set_auto_close_after_sync()
     {
         close_after_sync = true;
     }
+}
+
+void bucket_sync_register_bucket_deleted_callback(void(* callback)(uint8_t))
+{
 }
