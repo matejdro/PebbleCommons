@@ -126,7 +126,11 @@ class BucketsyncRepositoryImpl(
          Bucket(id.toUByte(), data)
       }
 
-      logcat { "Active buckets: $activeBuckets, bucketsToUpdate: ${bucketsToUpdate.map { it.id }}" }
+      logcat {
+         "Active buckets: $activeBuckets, " +
+            "bucketsToUpdate: ${bucketsToUpdate.map { it.id }}, " +
+            "extraBucketsToTransmit: ${extraBucketsToTransmit.map { it.id }}"
+      }
 
       return BucketUpdate(
          newVersion,
