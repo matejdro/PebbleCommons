@@ -45,7 +45,10 @@ class WatchappConnectionsManagerImpl(
       }
 
       if (connection == null) {
-         errorReporter.report(UnknownCauseException("Got app message for the closed connection"))
+         // This might happen if the phone app is restarted/reinstalled while the watchapp is still open.
+         // In this case, a session will not exist, while the watch will still send messages
+         // Since this is such a rare case, it's not really supported. It's easy to fix: just reopen the watchapp
+         logcat { "Got an AppMessage for a closed connection." }
          return ReceiveResult.Nack
       }
 
