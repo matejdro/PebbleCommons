@@ -7,6 +7,9 @@ package com.matejdro.pebble.bluetooth.common.util
  * This works around the issue by replacing all those characters with non-breaking spaces that
  * are not affected by this.
  */
+// It's pretty straightforward, just loop through characters
+// and replace whitespace with a different whitespace. Not complex.
+@Suppress("CognitiveComplexMethod")
 fun String.fixPebbleIndentation(): String {
    val originalString = this
 
