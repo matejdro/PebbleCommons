@@ -47,7 +47,7 @@ void bluetooth_init()
     app_message_register_inbox_received(on_received_data);
     app_message_register_outbox_sent(on_sent_data);
     app_message_register_outbox_failed(on_sending_failed);
-    app_message_open(appmessage_max_size, 200);
+    app_message_open(appmessage_max_size, 400);
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
