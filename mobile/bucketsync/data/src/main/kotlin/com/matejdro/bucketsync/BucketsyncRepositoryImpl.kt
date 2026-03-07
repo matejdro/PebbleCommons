@@ -158,7 +158,10 @@ class BucketsyncRepositoryImpl(
             if (nextBucketId < dynamicBucketPool.first) {
                dynamicBucketPool.first.toLong()
             } else if (nextBucketId > dynamicBucketPool.last) {
-               queries.getOldestBucketInRange(dynamicBucketPool.first.toLong(), dynamicBucketPool.last.toLong()).executeAsOne()
+               queries.getOldestBucketInRange(
+                  minInclusive = dynamicBucketPool.first.toLong(),
+                  maxInclusive = dynamicBucketPool.last.toLong()
+               ).executeAsOne()
             } else {
                nextBucketId
             }
@@ -179,9 +182,9 @@ class BucketsyncRepositoryImpl(
       queries.transaction {
          val nextVersion = queries.getLatestVersion().executeAsOneOrNull().let { it?.MAX ?: 0 } + 1
          queries.clearBuckets(
-            nextVersion,
-            dynamicBucketPool.first.toLong(),
-            dynamicBucketPool.last.toLong()
+            newVersion = nextVersion,
+            minInclusive = dynamicBucketPool.first.toLong(),
+            maxInclusive = dynamicBucketPool.last.toLong()
          ).value
       }
 
@@ -189,7 +192,7 @@ class BucketsyncRepositoryImpl(
    }
 
    override suspend fun updateBucketFlagsSilently(id: UByte, flags: UByte) = withIO<Unit> {
-      queries.updateFlagsSilently(flags.toLong(), id.toLong()).await()
+      queries.updateFlagsSilently(flags = flags.toLong(), id = id.toLong()).await()
    }
 }
 

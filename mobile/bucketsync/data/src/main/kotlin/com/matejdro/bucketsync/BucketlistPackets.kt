@@ -1,3 +1,5 @@
+@file:Suppress("MissingUseCall") // Buffer.write() returns `this` — callers own the buffer lifecycle
+
 package com.matejdro.bucketsync
 
 import com.matejdro.bucketsync.api.Bucket
@@ -27,6 +29,7 @@ internal fun createBucketsyncPackets(
    return additionalPackets
 }
 
+@Suppress("MagicNumber") // Magic numbers are the whole point of this function (protocol constants)
 private fun createAdditionalPackets(
    initialBucketsToUpdate: List<Bucket>,
    watchBufferSize: Int,

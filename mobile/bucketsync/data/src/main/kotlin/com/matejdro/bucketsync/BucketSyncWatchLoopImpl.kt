@@ -33,6 +33,7 @@ class BucketSyncWatchLoopImpl(
 ) : BucketSyncWatchLoop {
    private var bucketSyncJob: Job? = null
 
+   @Suppress("MissingUseCall") // Buffer is used as a long-lived scratch pad across coroutine operations
    override fun sendFirstPacketAndStartLoop(
       helloPacketBase: PebbleDictionary,
       initialWatchVersion: UShort,

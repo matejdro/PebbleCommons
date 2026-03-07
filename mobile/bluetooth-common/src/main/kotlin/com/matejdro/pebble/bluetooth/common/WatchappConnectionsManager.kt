@@ -6,18 +6,18 @@ import io.rebble.pebblekit2.common.model.WatchIdentifier
 import java.util.UUID
 
 interface WatchappConnectionsManager {
-   public suspend fun onMessageReceived(
+   suspend fun onMessageReceived(
       watchappUUID: UUID,
       data: PebbleDictionary,
       watch: WatchIdentifier,
    ): ReceiveResult
 
-   public fun onAppOpened(
+   fun onAppOpened(
       watchappUUID: UUID,
       watch: WatchIdentifier,
    )
 
-   public fun onAppClosed(
+   fun onAppClosed(
       watchappUUID: UUID,
       watch: WatchIdentifier,
    )

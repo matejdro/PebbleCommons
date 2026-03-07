@@ -24,7 +24,13 @@ class BackgroundSyncNotifierImpl(
    }
 
    override suspend fun notifyWatchFullySynced(watch: String) = withIO {
-      dbSyncStatus.insert(DbSyncStatus(watch, 1L, timeProvider.currentInstant().epochSecond))
+      dbSyncStatus.insert(
+         DbSyncStatus(
+            watchId = watch,
+            fullySynced = 1L,
+            lastFullySynced = timeProvider.currentInstant().epochSecond
+         )
+      )
       scheduleIfNeeded()
    }
 

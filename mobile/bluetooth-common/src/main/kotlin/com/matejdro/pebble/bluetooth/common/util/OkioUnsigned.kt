@@ -1,4 +1,4 @@
-@file:Suppress("NOTHING_TO_INLINE")
+@file:Suppress("NOTHING_TO_INLINE", "MissingUseCall") // write* methods return `this` — callers own the sink lifecycle
 
 package com.matejdro.pebble.bluetooth.common.util
 

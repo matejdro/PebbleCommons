@@ -36,6 +36,7 @@ class PacketQueue(
     *
     * If this coroutine is cancelled before the packet is sent, the packet will be removed from the queue.
     */
+   @Suppress("SuspendFunSwallowedCancellation") // CancellationException is re-thrown after queue cleanup
    suspend fun sendPacket(dictionary: PebbleDictionary, priority: Int = 0) {
       logcat { "Enqueue packet(id = ${dictionary[0u]}, priority = $priority)" }
 

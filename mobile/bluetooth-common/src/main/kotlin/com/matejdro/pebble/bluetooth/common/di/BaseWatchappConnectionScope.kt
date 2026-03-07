@@ -24,4 +24,4 @@ interface WatchappConnectionGraph {
    }
 }
 
-abstract class WatchappConnectionScope
+interface WatchappConnectionScope
