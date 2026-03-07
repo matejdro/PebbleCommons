@@ -1,6 +1,5 @@
 plugins {
    androidLibraryModule
-   testHelpers
 }
 
 dependencies {
