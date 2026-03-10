@@ -17,7 +17,7 @@ insert:
     :upstreamId,
     :flags
    WHERE NOT EXISTS
-    (SELECT 1 FROM dbBucket WHERE id = :id AND data = :data AND sortKey = :sortKey AND upstreamId = :upstreamId);
+    (SELECT 1 FROM dbBucket WHERE id = :id AND data = :data AND flags = :flags AND sortKey = :sortKey AND upstreamId = :upstreamId);
 
 updateFlagsSilently:
     UPDATE dbBucket SET flags = :flags WHERE id = :id;

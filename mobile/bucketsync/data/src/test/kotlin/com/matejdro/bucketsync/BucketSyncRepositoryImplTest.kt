@@ -745,10 +745,33 @@ class BucketSyncRepositoryImplTest {
 
       repo.awaitNextUpdate(0u)
 
-      repo.updateBucketFlagsSilently(1u, 12u)
+      repo.updateBucketFlagsSilently(2u, 12u)
       delay(1.seconds)
 
       repo.checkForNextUpdate(2u).shouldBeNull()
+   }
+
+   @Test
+   fun `Create an update when the flag is updated normally`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucket(1u, byteArrayOf(1), flags = 12u)
+      repo.updateBucket(2u, byteArrayOf(2), flags = 13u)
+      delay(1.seconds)
+
+      repo.awaitNextUpdate(0u)
+
+      repo.updateBucket(1u, byteArrayOf(1), flags = 14u)
+      delay(1.seconds)
+
+      repo.checkForNextUpdate(2u) shouldBe BucketUpdate(
+         toVersion = 3u,
+         activeBuckets = listOf(1u, 2u),
+         activeBucketFlags = listOf(14u, 13u),
+         bucketsToUpdate = listOf(
+            Bucket(1u, byteArrayOf(1)),
+         ),
+      )
    }
 
    @Test
