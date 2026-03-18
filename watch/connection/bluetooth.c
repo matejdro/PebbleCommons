@@ -6,6 +6,7 @@ uint32_t appmessage_max_size = 0;
 bool is_currently_sending_data = false;
 bool is_phone_connected = true;
 bool got_sending_error = false;
+bool ignore_bluetooth_busy_errors = false;
 
 static AppTimer* reconnect_init_timer = NULL;
 
@@ -128,10 +129,13 @@ static void on_sending_failed(DictionaryIterator* iterator, const AppMessageResu
     case APP_MSG_INTERNAL_ERROR:
     case APP_MSG_INVALID_STATE:
         trigger_sending_finish_callbacks(false);
-        got_sending_error = true;
-        if (local_sending_error_callback != NULL)
+        if (!ignore_bluetooth_busy_errors || reason != APP_MSG_BUSY)
         {
-            local_sending_error_callback();
+            got_sending_error = true;
+            if (local_sending_error_callback != NULL)
+            {
+                local_sending_error_callback();
+            }
         }
         break;
     case APP_MSG_NOT_CONNECTED:
