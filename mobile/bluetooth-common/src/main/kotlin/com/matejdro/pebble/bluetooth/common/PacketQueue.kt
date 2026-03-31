@@ -61,68 +61,87 @@ class PacketQueue(
    /**
     * Process packets in this queue. This will suspend indefinitely.
     */
+   @Suppress("SuspendFunSwallowedCancellation") // We clear the packets before re-throwing the exception
    suspend fun runQueue(): Nothing {
-      while (true) {
-         val nextPacket = synchronized(queue) {
-            queue.poll()
+      try {
+         while (true) {
+            val nextPacket = synchronized(queue) {
+               queue.poll()
+            }
+
+            if (nextPacket == null) {
+               newPacketNotification.receive()
+               continue
+            }
+
+            logcat { "Sending packet(id = ${nextPacket.dictionary[0u]})" }
+            sendPacket(nextPacket)
+         }
+      } catch (e: CancellationException) {
+         val finalPackets = synchronized(queue) {
+            queue.toList()
          }
 
-         if (nextPacket == null) {
-            newPacketNotification.receive()
-            continue
+         for (packet in finalPackets) {
+            packet.sentNofification.cancel(e)
          }
 
-         logcat { "Sending packet(id = ${nextPacket.dictionary[0u]})" }
-         sendPacket(nextPacket)
+         throw e
       }
    }
 
+   @Suppress("SuspendFunSwallowedCancellation") // We clear the packet before re-throwing the exception
    private suspend fun sendPacket(packet: Packet) {
-      var nextRetryDelay = START_RETRY_DELAY
-      do {
-         val result = sender.sendDataToPebble(watchappUuid, packet.dictionary, listOf(watch))
-         if (result == null) {
-            packet.sentNofification.completeExceptionally(
-               UnrecoverableWatchTransferException("No Pebble app is installed")
-            )
-            break
-         }
-
-         val watchResult = result[watch]
-         val retry = when (watchResult) {
-            TransmissionResult.Success -> {
-               logcat { "Sent" }
-               packet.sentNofification.complete(Unit)
-               false
-            }
-
-            TransmissionResult.FailedTimeout,
-            TransmissionResult.FailedWatchNotConnected,
-            TransmissionResult.FailedWatchNacked,
-            -> {
-               logcat { "Sending failed ($watchResult). Retrying..." }
-               delay(nextRetryDelay)
-               nextRetryDelay *= 2
-               true
-            }
-
-            TransmissionResult.FailedNoPermissions,
-            is TransmissionResult.Unknown,
-            null,
-            -> {
-               logcat { "Sending failed unrecoverably (${watchResult ?: "null"})" }
+      try {
+         var nextRetryDelay = START_RETRY_DELAY
+         do {
+            val result = sender.sendDataToPebble(watchappUuid, packet.dictionary, listOf(watch))
+            if (result == null) {
                packet.sentNofification.completeExceptionally(
-                  UnrecoverableWatchTransferException(watchResult?.toString())
+                  UnrecoverableWatchTransferException("No Pebble app is installed")
                )
-               false
+               break
             }
 
-            TransmissionResult.FailedDifferentAppOpen -> {
-               // Do not do anything. This coroutine will be cancelled any second now due to watchapp closing.
-               false
+            val watchResult = result[watch]
+            val retry = when (watchResult) {
+               TransmissionResult.Success -> {
+                  logcat { "Sent" }
+                  packet.sentNofification.complete(Unit)
+                  false
+               }
+
+               TransmissionResult.FailedTimeout,
+               TransmissionResult.FailedWatchNotConnected,
+               TransmissionResult.FailedWatchNacked,
+               -> {
+                  logcat { "Sending failed ($watchResult). Retrying..." }
+                  delay(nextRetryDelay)
+                  nextRetryDelay *= 2
+                  true
+               }
+
+               TransmissionResult.FailedNoPermissions,
+               is TransmissionResult.Unknown,
+               null,
+               -> {
+                  logcat { "Sending failed unrecoverably (${watchResult ?: "null"})" }
+                  packet.sentNofification.completeExceptionally(
+                     UnrecoverableWatchTransferException(watchResult?.toString())
+                  )
+                  false
+               }
+
+               TransmissionResult.FailedDifferentAppOpen -> {
+                  // Do not do anything. This coroutine will be cancelled any second now due to watchapp closing.
+                  false
+               }
             }
-         }
-      } while (retry)
+         } while (retry)
+      } catch (e: CancellationException) {
+         packet.sentNofification.cancel(e)
+         throw e
+      }
    }
 
    private class Packet(

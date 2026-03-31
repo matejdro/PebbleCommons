@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.rebble.pebblekit2.common.model.PebbleDictionaryItem
 import io.rebble.pebblekit2.common.model.TransmissionResult
 import io.rebble.pebblekit2.common.model.WatchIdentifier
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -165,6 +166,33 @@ class PacketQueueTest {
       )
 
       packet.cancel()
+   }
+
+   @Test
+   @Suppress("SuspendFunSwallowedCancellation") // Test
+   fun `Cancel pending packets if the queue is cancelled`() = scope.runTest {
+      val queue = backgroundScope.launch {
+         packetQueue.runQueue()
+      }
+
+      sender.pauseSending = true
+      runCurrent()
+
+      launch { packetQueue.sendPacket(mapOf(0u to PebbleDictionaryItem.UInt8(1u))) }
+
+      var cancelled = false
+      launch {
+         try {
+            packetQueue.sendPacket(mapOf(0u to PebbleDictionaryItem.UInt8(1u)))
+         } catch (ignored: CancellationException) {
+            cancelled = true
+         }
+      }
+      runCurrent()
+
+      queue.cancel()
+      runCurrent()
+      cancelled shouldBe true
    }
 }
 
