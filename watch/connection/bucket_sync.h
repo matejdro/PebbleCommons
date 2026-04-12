@@ -2,6 +2,8 @@
 
 #include <pebble.h>
 
+#define MAX_BUCKETS 15
+
 typedef struct __attribute__ ((packed))
 {
     uint8_t id;
@@ -13,7 +15,7 @@ BucketMetadata;
 typedef struct __attribute__ ((packed))
 {
     uint8_t count;
-    BucketMetadata data[15];
+    BucketMetadata data[MAX_BUCKETS];
 }
 
 BucketList;
