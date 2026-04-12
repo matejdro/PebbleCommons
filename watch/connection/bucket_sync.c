@@ -20,6 +20,7 @@ static DataChangeCallback data_change_callback = {
     .context = NULL,
 };
 static void (*syncing_status_callback)() = NULL;
+static void (*second_syncing_status_callback)() = NULL;
 
 static uint16_t bucket_sync_pending_next_version = 0;
 bool bucket_sync_is_currently_syncing = true;
@@ -144,6 +145,11 @@ void bucket_sync_on_start_received(const uint8_t* data, const size_t data_size)
             local_syncing_callback();
         }
 
+        if (second_syncing_status_callback != NULL)
+        {
+            second_syncing_status_callback();
+        }
+
         if (close_after_sync)
         {
             window_stack_pop_all(true);
@@ -157,6 +163,10 @@ void bucket_sync_on_start_received(const uint8_t* data, const size_t data_size)
     if (local_syncing_callback != NULL)
     {
         local_syncing_callback();
+    }
+    if (second_syncing_status_callback != NULL)
+    {
+        second_syncing_status_callback();
     }
 
     bucket_sync_pending_next_version = read_uint16_from_byte_array(data, 1);
@@ -250,6 +260,10 @@ static void complete_sync(void)
     {
         local_syncing_callback();
     }
+    if (second_syncing_status_callback != NULL)
+    {
+        second_syncing_status_callback();
+    }
 
     if (close_after_sync)
     {
@@ -292,6 +306,11 @@ static uint32_t get_bucket_persist_key(const uint8_t bucket_id)
 void bucket_sync_register_syncing_status_changed_callback(void (*callback)())
 {
     syncing_status_callback = callback;
+}
+
+void bucket_sync_register_second_syncing_status_changed_callback(void (*callback)())
+{
+    second_syncing_status_callback = callback;
 }
 
 void bucket_sync_set_auto_close_after_sync()

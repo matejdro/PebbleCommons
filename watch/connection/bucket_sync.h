@@ -66,6 +66,8 @@ void bucket_sync_clear_bucket_data_change_callback(void(*callback)(BucketMetadat
 
 void bucket_sync_register_syncing_status_changed_callback(void (*callback)());
 
+void bucket_sync_register_second_syncing_status_changed_callback(void (*callback)());
+
 void bucket_sync_on_start_received(const uint8_t* data, size_t data_size);
 void bucket_sync_on_next_packet_received(const uint8_t* data, size_t data_size);
 
