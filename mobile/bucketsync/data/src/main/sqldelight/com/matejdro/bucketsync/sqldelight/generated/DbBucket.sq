@@ -43,9 +43,6 @@ getUpdatedBuckets:
 getActiveBuckets:
    SELECT id, flags FROM dbBucket WHERE data IS NOT NULL ORDER BY sortKey ASC, id ASC LIMIT :limit;
 
-getPotentialActiveBuckets:
-   SELECT id FROM dbBucket ORDER BY sortKey ASC, id ASC LIMIT :limit;
-
 getLatestVersion:
    SELECT MAX(version) FROM dbBucket;
 

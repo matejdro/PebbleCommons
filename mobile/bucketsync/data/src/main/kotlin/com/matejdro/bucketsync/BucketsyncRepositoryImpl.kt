@@ -71,7 +71,11 @@ class BucketsyncRepositoryImpl(
          backgroundSyncNotifier.notifyDataChanged()
       }
 
-   override suspend fun awaitNextUpdate(currentVersion: UShort, maxActiveBuckets: Int): BucketUpdate = withIO {
+   override suspend fun awaitNextUpdate(
+      currentVersion: UShort,
+      currentActiveBuckets: List<UByte>,
+      maxActiveBuckets: Int,
+   ): BucketUpdate = withIO {
       logcat { "Await next update from $currentVersion" }
       val versionFlow = queries.getLatestVersion().asFlow().map { it.executeAsOne().MAX?.toUShort() ?: 0u }
       val newVersion = versionFlow.debounce(BUCKET_UPDATE_DEBOUNCE).first { it != currentVersion }
@@ -85,10 +89,14 @@ class BucketsyncRepositoryImpl(
          0u
       }
 
-      createBucketUpdate(requestVersion, newVersion, maxActiveBuckets)
+      createBucketUpdate(requestVersion, newVersion, currentActiveBuckets, maxActiveBuckets)
    }
 
-   override suspend fun checkForNextUpdate(currentVersion: UShort, maxActiveBuckets: Int): BucketUpdate? = withIO {
+   override suspend fun checkForNextUpdate(
+      currentVersion: UShort,
+      currentActiveBuckets: List<UByte>,
+      maxActiveBuckets: Int,
+   ): BucketUpdate? = withIO {
       logcat { "Check next update from $currentVersion" }
       val latestVersion = queries.getLatestVersion().executeAsOne().MAX?.toUShort() ?: 0u
 
@@ -103,15 +111,17 @@ class BucketsyncRepositoryImpl(
          0u
       }
 
-      createBucketUpdate(requestVersion, latestVersion, maxActiveBuckets)
+      createBucketUpdate(requestVersion, latestVersion, currentActiveBuckets, maxActiveBuckets)
    }
 
-   private fun createBucketUpdate(requestVersion: UShort, newVersion: UShort, maxActiveBuckets: Int): BucketUpdate {
+   private fun createBucketUpdate(
+      requestVersion: UShort,
+      newVersion: UShort,
+      currentActiveBuckets: List<UByte>,
+      maxActiveBuckets: Int,
+   ): BucketUpdate {
       val activeBuckets =
          queries.getActiveBuckets(maxActiveBuckets.toLong()).executeAsList().map { it.id.toUShort() to it.flags.toUByte() }
-      val potentialActiveBuckets = queries.getPotentialActiveBuckets(
-         maxActiveBuckets.toLong()
-      ).executeAsList().map { it.toUShort() }
 
       val bucketsToUpdate = queries.getUpdatedBuckets(
          requestVersion.toLong(),
@@ -120,11 +130,13 @@ class BucketsyncRepositoryImpl(
 
       // If buckets became inactive and then active again, they were deleted from the watch
       // Even though the contents has not changed. we have to send them along
-      val extraBucketsToTransmit = (activeBuckets.map { it.first } - potentialActiveBuckets).mapNotNull { id ->
-         val data = queries.getBucket(id.toLong()).executeAsOne().data_ ?: return@mapNotNull null
+      val extraBucketsToTransmit =
+         (activeBuckets.map { it.first.toUByte() } - currentActiveBuckets - bucketsToUpdate.map { it.id.toUByte() })
+            .mapNotNull { id ->
+               val data = queries.getBucket(id.toLong()).executeAsOne().data_ ?: return@mapNotNull null
 
-         Bucket(id.toUByte(), data)
-      }
+               Bucket(id, data)
+            }
 
       logcat {
          "Active buckets: $activeBuckets, " +

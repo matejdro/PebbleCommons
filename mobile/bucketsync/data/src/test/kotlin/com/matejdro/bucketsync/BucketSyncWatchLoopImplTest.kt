@@ -43,7 +43,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         30
+         30,
+         emptyList(),
       )
       runCurrent()
 
@@ -68,7 +69,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         30
+         30,
+         emptyList(),
       )
       runCurrent()
 
@@ -99,7 +101,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         29
+         29,
+         emptyList(),
       )
       runCurrent()
 
@@ -139,7 +142,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         29
+         29,
+         emptyList(),
       )
       runCurrent()
 
@@ -180,12 +184,78 @@ class BucketSyncWatchLoopImplTest {
    }
 
    @Test
+   fun `Re-send active buckets when not active on the watch even when not changed`() = scope.runTest {
+      bucketSyncRepository.updateBucket(1u, byteArrayOf(1))
+      delay(5.seconds)
+      bucketSyncRepository.updateBucket(2u, byteArrayOf(2))
+
+      init()
+      loop.sendFirstPacketAndStartLoop(
+         mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
+         1u,
+         30,
+         listOf(2u),
+      )
+      runCurrent()
+
+      sender.sentData.shouldContainExactly(
+         mapOf(
+            0u to PebbleDictionaryItem.UInt8(1u),
+            2u to PebbleDictionaryItem.Bytes(
+               byteArrayOf(
+                  1, // Status
+                  0, 2, // Latest version
+                  2, // Num of active buckets
+                  1, 0, // Metadata for bucket 1
+                  2, 0, // Metadata for bucket 2
+                  2, 1, 2, // Sync data for bucket 2
+                  1, 1, 1, // Sync data for bucket 1
+               )
+            ),
+         )
+      )
+   }
+
+   @Test
+   fun `Do not re-send active buckets when already active on the watch and not changed`() = scope.runTest {
+      bucketSyncRepository.updateBucket(1u, byteArrayOf(1))
+      delay(5.seconds)
+      bucketSyncRepository.updateBucket(2u, byteArrayOf(2))
+
+      init()
+      loop.sendFirstPacketAndStartLoop(
+         mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
+         1u,
+         30,
+         listOf(2u, 1u),
+      )
+      runCurrent()
+
+      sender.sentData.shouldContainExactly(
+         mapOf(
+            0u to PebbleDictionaryItem.UInt8(1u),
+            2u to PebbleDictionaryItem.Bytes(
+               byteArrayOf(
+                  1, // Status
+                  0, 2, // Latest version
+                  2, // Num of active buckets
+                  1, 0, // Metadata for bucket 1
+                  2, 0, // Metadata for bucket 2
+                  2, 1, 2, // Sync data for bucket 2
+               )
+            ),
+         )
+      )
+   }
+
+   @Test
    fun `Send new sync packet if buckets update after initial sync packet `() = scope.runTest {
       init()
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       runCurrent()
 
@@ -219,7 +289,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       runCurrent()
       sender.sentPackets.clear()
@@ -271,12 +342,14 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       runCurrent()
 
@@ -298,7 +371,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       runCurrent()
 
@@ -311,7 +385,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       runCurrent()
 
@@ -333,7 +408,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       runCurrent()
 
@@ -349,7 +425,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         30
+         30,
+         emptyList(),
       )
       runCurrent()
 
@@ -377,7 +454,8 @@ class BucketSyncWatchLoopImplTest {
       loop.sendFirstPacketAndStartLoop(
          mapOf(0u to PebbleDictionaryItem.UInt8(1u)),
          0u,
-         52
+         52,
+         emptyList(),
       )
       runCurrent()
 

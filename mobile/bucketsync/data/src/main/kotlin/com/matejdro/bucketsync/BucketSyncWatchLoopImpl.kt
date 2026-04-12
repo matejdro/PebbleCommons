@@ -1,5 +1,6 @@
 package com.matejdro.bucketsync
 
+import androidx.annotation.VisibleForTesting
 import com.matejdro.bucketsync.background.BackgroundSyncNotifier
 import com.matejdro.pebble.bluetooth.common.PacketQueue
 import com.matejdro.pebble.bluetooth.common.di.WatchappConnectionScope
@@ -33,17 +34,27 @@ class BucketSyncWatchLoopImpl(
 ) : BucketSyncWatchLoop {
    private var bucketSyncJob: Job? = null
 
+   @VisibleForTesting
+   var lastActiveBuckets: List<UByte>? = null
+
    @Suppress("MissingUseCall") // Buffer is used as a long-lived scratch pad across coroutine operations
    override fun sendFirstPacketAndStartLoop(
       helloPacketBase: PebbleDictionary,
       initialWatchVersion: UShort,
       watchBufferSize: Int,
+      currentlyActiveBuckets: List<UByte>,
+      maxActiveBuckets: Int,
       onBucketsChanged: suspend () -> Unit,
    ) {
+      lastActiveBuckets = currentlyActiveBuckets
       bucketSyncJob?.cancel()
       bucketSyncJob = coroutineScope.launch {
          val bucketsyncBuffer = Buffer()
-         val initialUpdate = bucketSyncRepository.checkForNextUpdate(initialWatchVersion)
+         val initialUpdate = bucketSyncRepository.checkForNextUpdate(
+            initialWatchVersion,
+            currentlyActiveBuckets,
+            maxActiveBuckets
+         )
          val watchVersion: UShort
          if (initialUpdate == null) {
             bucketsyncBuffer.writeUByte(SYNC_STATUS_UP_TO_DATE)
@@ -91,7 +102,14 @@ class BucketSyncWatchLoopImpl(
             backgroundSyncNotifier.notifyWatchFullySynced(watch.value)
          }
 
-         observeForFutureSyncs(watchVersion, bucketsyncBuffer, watchBufferSize, onBucketsChanged)
+         observeForFutureSyncs(
+            watchVersion,
+            bucketsyncBuffer,
+            watchBufferSize,
+            currentlyActiveBuckets,
+            maxActiveBuckets,
+            onBucketsChanged
+         )
       }
    }
 
@@ -99,12 +117,19 @@ class BucketSyncWatchLoopImpl(
       initialWatchVersion: UShort,
       bucketsyncBuffer: Buffer,
       watchBufferSize: Int,
+      initiallyActiveBuckets: List<UByte>,
+      maxActiveBuckets: Int,
       onBucketsChanged: suspend () -> Unit,
    ) {
+      var activeBuckets = initiallyActiveBuckets
       var watchVersion = initialWatchVersion
 
       while (currentCoroutineContext().isActive) {
-         val nextUpdate = bucketSyncRepository.awaitNextUpdate(watchVersion)
+         val nextUpdate = bucketSyncRepository.awaitNextUpdate(
+            watchVersion,
+            activeBuckets,
+            maxActiveBuckets
+         )
          logcat {
             "Phone updated while the watchapp is open: " +
                "${nextUpdate.toVersion} | ${nextUpdate.bucketsToUpdate.map { it.id }}"
@@ -139,6 +164,8 @@ class BucketSyncWatchLoopImpl(
          watchVersion = nextUpdate.toVersion
          backgroundSyncNotifier.notifyWatchFullySynced(watch.value)
          onBucketsChanged()
+
+         activeBuckets = nextUpdate.activeBuckets.map { it.toUByte() }
       }
    }
 }

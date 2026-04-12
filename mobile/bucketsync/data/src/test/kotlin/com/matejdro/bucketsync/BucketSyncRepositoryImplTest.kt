@@ -35,7 +35,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          2u,
@@ -56,7 +56,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(3))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          3u,
@@ -76,7 +76,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2))
       delay(1.seconds)
 
-      val bucketsToUpdate = async { repo.awaitNextUpdate(2u) }
+      val bucketsToUpdate = async { repo.awaitNextUpdate(2u, listOf(1u, 2u)) }
       runCurrent()
       bucketsToUpdate.isCompleted shouldBe false
 
@@ -96,7 +96,7 @@ class BucketSyncRepositoryImplTest {
    fun `Await until the first bucket update is ready`() = scope.runTest {
       repo.init(1)
 
-      val bucketsToUpdate = async { repo.awaitNextUpdate(0u) }
+      val bucketsToUpdate = async { repo.awaitNextUpdate(0u, emptyList()) }
 
       runCurrent()
       bucketsToUpdate.isCompleted shouldBe false
@@ -124,7 +124,7 @@ class BucketSyncRepositoryImplTest {
       repo.deleteBucket(2u)
       runCurrent()
 
-      val bucketsToUpdate = repo.awaitNextUpdate(2u)
+      val bucketsToUpdate = repo.awaitNextUpdate(2u, listOf(1u, 2u))
 
       bucketsToUpdate shouldBe BucketUpdate(
          3u,
@@ -155,7 +155,7 @@ class BucketSyncRepositoryImplTest {
       repo.init(1)
       runCurrent()
 
-      val bucketsToUpdate = async { repo.awaitNextUpdate(0u) }
+      val bucketsToUpdate = async { repo.awaitNextUpdate(0u, emptyList()) }
       delay(1.seconds)
       bucketsToUpdate.isCompleted shouldBe true
    }
@@ -171,7 +171,7 @@ class BucketSyncRepositoryImplTest {
       repo.init(2)
       runCurrent()
 
-      val bucketsToUpdate = async { repo.awaitNextUpdate(0u) }
+      val bucketsToUpdate = async { repo.awaitNextUpdate(0u, emptyList()) }
       runCurrent()
       bucketsToUpdate.isCompleted shouldBe false
 
@@ -182,7 +182,7 @@ class BucketSyncRepositoryImplTest {
    fun `Debounce all updates made in a short span into a single update`() = scope.runTest {
       repo.init(1)
 
-      val bucketsToUpdate = async { repo.awaitNextUpdate(0u) }
+      val bucketsToUpdate = async { repo.awaitNextUpdate(0u, emptyList()) }
 
       repo.updateBucket(1u, byteArrayOf(1))
       repo.updateBucket(2u, byteArrayOf(2))
@@ -220,7 +220,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2))
       delay(1.seconds)
 
-      val bucketsToUpdate = async { repo.awaitNextUpdate(2u) }
+      val bucketsToUpdate = async { repo.awaitNextUpdate(2u, emptyList()) }
       delay(1.seconds)
 
       bucketsToUpdate.isCompleted shouldBe false
@@ -238,7 +238,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(3))
       delay(1.seconds)
 
-      repo.awaitNextUpdate(6u) shouldBe BucketUpdate(
+      repo.awaitNextUpdate(6u, emptyList()) shouldBe BucketUpdate(
          3u,
          listOf(1u, 2u),
          listOf(
@@ -256,7 +256,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.checkForNextUpdate(0u)
+      val bucketsToUpdate = repo.checkForNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          2u,
@@ -276,7 +276,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2))
       delay(1.seconds)
 
-      repo.checkForNextUpdate(2u) shouldBe null
+      repo.checkForNextUpdate(2u, emptyList()) shouldBe null
    }
 
    @Test
@@ -290,7 +290,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(3))
       delay(1.seconds)
 
-      repo.checkForNextUpdate(6u) shouldBe BucketUpdate(
+      repo.checkForNextUpdate(6u, emptyList()) shouldBe BucketUpdate(
          3u,
          listOf(1u, 2u),
          listOf(
@@ -311,7 +311,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(1u, byteArrayOf(1))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.checkForNextUpdate(65535u)
+      val bucketsToUpdate = repo.checkForNextUpdate(65535u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          1u,
@@ -357,7 +357,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2), sortKey = 1)
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate.activeBuckets.shouldContainExactly(2u, 1u)
    }
@@ -372,7 +372,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(4u, byteArrayOf(4))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate.activeBuckets.shouldContainExactly(1u, 4u, 2u, 3u)
    }
@@ -386,7 +386,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(3u, byteArrayOf(3))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u, maxActiveBuckets = 2)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList(), maxActiveBuckets = 2)
 
       bucketsToUpdate shouldBe BucketUpdate(
          3u,
@@ -407,7 +407,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(3u, byteArrayOf(3))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.checkForNextUpdate(0u, maxActiveBuckets = 2)
+      val bucketsToUpdate = repo.checkForNextUpdate(0u, emptyList(), maxActiveBuckets = 2)
 
       bucketsToUpdate shouldBe BucketUpdate(
          3u,
@@ -430,7 +430,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2), sortKey = 1)
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          3u,
@@ -450,7 +450,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("2", byteArrayOf(2)) shouldBe 2
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          2u,
@@ -472,7 +472,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("1", byteArrayOf(2))
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          2u,
@@ -494,7 +494,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5) shouldBe 2 // All buckets taken, repurpose 2
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          5u,
@@ -515,7 +515,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3) // All buckets taken, repurpose 2
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          3u,
@@ -541,7 +541,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("2", byteArrayOf(2), sortKey = -2) // Will take free bucket 3
       repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3) // All buckets taken, repurpose 2
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          5u,
@@ -562,7 +562,7 @@ class BucketSyncRepositoryImplTest {
       repo.deleteBucketDynamic("1")
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          3u,
@@ -596,12 +596,12 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("2", byteArrayOf(2))
       delay(1.seconds)
 
-      repo.awaitNextUpdate(0u)
+      repo.awaitNextUpdate(0u, emptyList())
 
       repo.deleteBucketDynamic("3")
       delay(1.seconds)
 
-      repo.checkForNextUpdate(2u) shouldBe null
+      repo.checkForNextUpdate(2u, emptyList()) shouldBe null
    }
 
    @Test
@@ -616,7 +616,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("5", byteArrayOf(5), sortKey = -5)
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          6u,
@@ -639,7 +639,7 @@ class BucketSyncRepositoryImplTest {
       repo.clearAllDynamic()
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          4u,
@@ -675,12 +675,12 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
       delay(1.seconds)
 
-      repo.awaitNextUpdate(0u, maxActiveBuckets = 2)
+      repo.awaitNextUpdate(0u, emptyList(), maxActiveBuckets = 2)
 
       repo.deleteBucketDynamic("3")
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(3u, maxActiveBuckets = 2)
+      val bucketsToUpdate = repo.awaitNextUpdate(3u, listOf(2u, 3u), maxActiveBuckets = 2)
 
       bucketsToUpdate shouldBe BucketUpdate(
          4u,
@@ -699,7 +699,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2), flags = 13u)
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          toVersion = 2u,
@@ -720,7 +720,7 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("2", byteArrayOf(2), flags = 125u) shouldBe 2
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(0u)
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
 
       bucketsToUpdate shouldBe BucketUpdate(
          toVersion = 2u,
@@ -743,12 +743,12 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2), flags = 13u)
       delay(1.seconds)
 
-      repo.awaitNextUpdate(0u)
+      repo.awaitNextUpdate(0u, emptyList())
 
       repo.updateBucketFlagsSilently(2u, 12u)
       delay(1.seconds)
 
-      repo.checkForNextUpdate(2u).shouldBeNull()
+      repo.checkForNextUpdate(2u, emptyList()).shouldBeNull()
    }
 
    @Test
@@ -759,12 +759,12 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2), flags = 13u)
       delay(1.seconds)
 
-      repo.awaitNextUpdate(0u)
+      repo.awaitNextUpdate(0u, emptyList())
 
       repo.updateBucket(1u, byteArrayOf(1), flags = 14u)
       delay(1.seconds)
 
-      repo.checkForNextUpdate(2u) shouldBe BucketUpdate(
+      repo.checkForNextUpdate(2u, listOf(1u, 2u)) shouldBe BucketUpdate(
          toVersion = 3u,
          activeBuckets = listOf(1u, 2u),
          activeBucketFlags = listOf(14u, 13u),
@@ -783,13 +783,13 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucketDynamic("3", byteArrayOf(3), sortKey = -3)
       delay(1.seconds)
 
-      repo.awaitNextUpdate(0u, maxActiveBuckets = 2)
+      repo.awaitNextUpdate(0u, emptyList(), maxActiveBuckets = 2)
 
       repo.updateBucketFlagsSilently(1u, 12u)
       repo.deleteBucketDynamic("3")
       delay(1.seconds)
 
-      val bucketsToUpdate = repo.awaitNextUpdate(3u, maxActiveBuckets = 2)
+      val bucketsToUpdate = repo.awaitNextUpdate(3u, listOf(2u, 3u), maxActiveBuckets = 2)
 
       bucketsToUpdate shouldBe BucketUpdate(
          toVersion = 4u,

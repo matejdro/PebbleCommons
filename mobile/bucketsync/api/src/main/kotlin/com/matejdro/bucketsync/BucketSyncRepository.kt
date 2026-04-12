@@ -23,7 +23,11 @@ interface BucketSyncRepository {
     * Method will check whether a different version than the [currentVersion] is available. It will return a BucketUpdate
     * with the new version and all buckets that need to update or *null* if there is no such update
     */
-   suspend fun awaitNextUpdate(currentVersion: UShort, maxActiveBuckets: Int = 15): BucketUpdate
+   suspend fun awaitNextUpdate(
+      currentVersion: UShort,
+      currentActiveBuckets: List<UByte>,
+      maxActiveBuckets: Int = 15,
+   ): BucketUpdate
 
    /**
     * Method will suspend until a different version than the [currentVersion] is available. Then it will return a BucketUpdate
@@ -31,7 +35,11 @@ interface BucketSyncRepository {
     *
     * This may be debounced (e.g. quick successive updates will only trigger a single update).
     */
-   suspend fun checkForNextUpdate(currentVersion: UShort, maxActiveBuckets: Int = 15): BucketUpdate?
+   suspend fun checkForNextUpdate(
+      currentVersion: UShort,
+      currentActiveBuckets: List<UByte>,
+      maxActiveBuckets: Int = 15,
+   ): BucketUpdate?
 
    /**
     * Delete data of the passed bucket from the watch
