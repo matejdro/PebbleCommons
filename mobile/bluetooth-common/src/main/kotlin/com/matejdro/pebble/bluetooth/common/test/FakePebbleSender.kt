@@ -1,11 +1,15 @@
 package com.matejdro.pebble.bluetooth.common.test
 
 import io.rebble.pebblekit2.client.PebbleSender
-import io.rebble.pebblekit2.common.model.*
+import io.rebble.pebblekit2.common.model.PebbleDictionary
+import io.rebble.pebblekit2.common.model.TimelinePin
+import io.rebble.pebblekit2.common.model.TimelineResult
+import io.rebble.pebblekit2.common.model.TransmissionResult
+import io.rebble.pebblekit2.common.model.WatchIdentifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import si.inova.kotlinova.core.time.TimeProvider
-import java.util.*
+import java.util.UUID
 
 class FakePebbleSender(
    private val timeProvider: TimeProvider,
@@ -14,10 +18,14 @@ class FakePebbleSender(
    private val _pauseSending = MutableStateFlow(false)
 
    var sendingResult: TransmissionResult = TransmissionResult.Success
+   var timelineResult: TimelineResult = TimelineResult.Success
    var reportNoPebbleAppInstalled: Boolean = false
 
    val startedApps = mutableListOf<AppLifecycleEvent>()
    val stoppedApps = mutableListOf<AppLifecycleEvent>()
+
+   val insertedPins = mutableListOf<TimelinePin>()
+   val deletedPins = mutableListOf<String>()
 
    var pauseSending: Boolean
       get() = _pauseSending.value
@@ -64,14 +72,16 @@ class FakePebbleSender(
       watchappUUID: UUID,
       timelinePin: TimelinePin,
    ): TimelineResult {
-      throw UnsupportedOperationException("Not supported in tests")
+      insertedPins += timelinePin
+      return timelineResult
    }
 
    override suspend fun deleteTimelinePin(
       watchappUUID: UUID,
       id: String,
    ): TimelineResult {
-      throw UnsupportedOperationException("Not supported in tests")
+      deletedPins += id
+      return timelineResult
    }
 
    override fun close() {
