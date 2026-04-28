@@ -1,13 +1,11 @@
 package com.matejdro.pebble.bluetooth.common.test
 
 import io.rebble.pebblekit2.client.PebbleSender
-import io.rebble.pebblekit2.common.model.PebbleDictionary
-import io.rebble.pebblekit2.common.model.TransmissionResult
-import io.rebble.pebblekit2.common.model.WatchIdentifier
+import io.rebble.pebblekit2.common.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import si.inova.kotlinova.core.time.TimeProvider
-import java.util.UUID
+import java.util.*
 
 class FakePebbleSender(
    private val timeProvider: TimeProvider,
@@ -60,6 +58,20 @@ class FakePebbleSender(
       stoppedApps += AppLifecycleEvent(watchappUUID, watches)
 
       return watches?.associateWith { sendingResult }.orEmpty()
+   }
+
+   override suspend fun insertTimelinePin(
+      watchappUUID: UUID,
+      timelinePin: TimelinePin,
+   ): TimelineResult {
+      throw UnsupportedOperationException("Not supported in tests")
+   }
+
+   override suspend fun deleteTimelinePin(
+      watchappUUID: UUID,
+      id: String,
+   ): TimelineResult {
+      throw UnsupportedOperationException("Not supported in tests")
    }
 
    override fun close() {
