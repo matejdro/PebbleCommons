@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
    api(projects.logging.api)
-   api(projects.common)
    api(libs.androidx.core)
    api(libs.dispatch)
    api(libs.kermit)
