@@ -5,7 +5,7 @@
         <activity android:name="com.matejdro.pebble.common.crashreport.CrashReportActivity"
                   android:exported="false"
                   android:process=":crash_report_process"
-                  android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
+                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
 
         <service android:name="com.matejdro.pebble.common.crashreport.CrashReportService"
                  android:exported="false"
