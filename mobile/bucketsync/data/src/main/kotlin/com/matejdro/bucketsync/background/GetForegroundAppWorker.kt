@@ -11,7 +11,6 @@ import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.IntoMap
 import dev.zacsweers.metro.binding
 import io.rebble.pebblekit2.client.PebbleInfoRetriever
 import io.rebble.pebblekit2.common.model.WatchIdentifier
@@ -21,7 +20,6 @@ import logcat.logcat
 import si.inova.kotlinova.core.reporting.ErrorReporter
 
 @AssistedInject
-@IntoMap
 class GetForegroundAppWorker(
    context: Context,
    private val workerController: WorkControllerImpl,

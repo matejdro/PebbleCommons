@@ -12,7 +12,6 @@ import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.IntoMap
 import dev.zacsweers.metro.binding
 import dispatch.core.withIO
 import io.rebble.pebblekit2.client.PebbleInfoRetriever
@@ -22,7 +21,6 @@ import si.inova.kotlinova.core.time.TimeProvider
 import kotlin.time.toJavaDuration
 
 @AssistedInject
-@IntoMap
 class GetConnectedWatchesWorker(
    context: Context,
    private val workerController: WorkControllerImpl,
