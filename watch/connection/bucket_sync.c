@@ -88,12 +88,17 @@ void bucket_sync_init()
 
 bool bucket_sync_load_bucket(const uint8_t bucket_id, uint8_t* target)
 {
+    return bucket_sync_load_bucket_limited(bucket_id, target, UINT8_MAX);
+}
+
+bool bucket_sync_load_bucket_limited(const uint8_t bucket_id, uint8_t* target, const uint8_t max_size)
+{
     const uint32_t persist_key = get_bucket_persist_key(bucket_id);
-    const int status = persist_read_data(persist_key, target, PERSIST_DATA_MAX_LENGTH);
+    const int status = persist_read_data(persist_key, target, max_size);
     return status != E_DOES_NOT_EXIST;
 }
 
- uint8_t bucket_sync_get_bucket_size(const uint8_t bucket_id)
+uint8_t bucket_sync_get_bucket_size(const uint8_t bucket_id)
 {
     const int value = persist_get_size(get_bucket_persist_key(bucket_id));
     if (value == E_DOES_NOT_EXIST)
@@ -112,6 +117,14 @@ BucketList* bucket_sync_get_bucket_list()
 void bucket_sync_set_bucket_list_change_callback(void (*callback)())
 {
     list_change_callback = callback;
+}
+
+void bucket_sync_clear_bucket_list_change_callback(void(* callback)())
+{
+    if (list_change_callback == callback)
+    {
+        list_change_callback = NULL;
+    }
 }
 
 void bucket_sync_set_bucket_data_change_callback(void(*callback)(BucketMetadata, void*), void*context)

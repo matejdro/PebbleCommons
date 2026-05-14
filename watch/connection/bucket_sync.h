@@ -36,6 +36,15 @@ void bucket_sync_init();
 bool bucket_sync_load_bucket(uint8_t bucket_id, uint8_t* target);
 
 /**
+ * Load contents of a bucket into a target array.
+ *
+ * Target must be an array of provided max_size.
+ *
+ * @return true if load was successful, false if bucket does not exist
+ */
+bool bucket_sync_load_bucket_limited(uint8_t bucket_id, uint8_t* target, uint8_t max_size);
+
+/**
  * @return Size of the bucket in bytes or 0 if bucket does not exist
  */
 uint8_t bucket_sync_get_bucket_size(uint8_t bucket_id);
@@ -49,6 +58,11 @@ BucketList* bucket_sync_get_bucket_list();
  * Register the callback that will get triggered whenever a list of currently active buckets change
  */
 void bucket_sync_set_bucket_list_change_callback(void (*callback)());
+
+/**
+ * Clear the callback if currently registered callback is the passed one.
+ */
+void bucket_sync_clear_bucket_list_change_callback(void (*callback)());
 
 /**
  * Register the callback that will get triggered whenever a data of a bucket changes.
