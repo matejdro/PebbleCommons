@@ -303,7 +303,7 @@ class BucketSyncRepositoryImplTest {
    @Test
    fun `When version passes 65535 (ushort max), it should wrap around back to one`() = scope.runTest {
       db.insertRaw(
-         DbBucket(1, byteArrayOf(1), 65535, null, null, 0)
+         DbBucket(1, byteArrayOf(1), 65535, null, null, 0, null)
       )
 
       repo.init(1)
@@ -799,6 +799,35 @@ class BucketSyncRepositoryImplTest {
             Bucket(1u, byteArrayOf(1)),
          ),
       )
+   }
+
+   @Test
+   fun `Delete all buckets from the group with exceptions`() = scope.runTest {
+      repo.init(1)
+
+      repo.updateBucketDynamic("1", byteArrayOf(1), groupId = "A")
+      repo.updateBucketDynamic("2", byteArrayOf(2), groupId = "A")
+      repo.updateBucketDynamic("3", byteArrayOf(3), groupId = "B")
+      repo.updateBucketDynamic("4", byteArrayOf(4), groupId = "B")
+      repo.updateBucketDynamic("5", byteArrayOf(5), groupId = "B")
+      delay(1.seconds)
+
+      repo.deleteGroup("B", except = listOf("3"))
+      delay(1.seconds)
+
+      val bucketsToUpdate = repo.awaitNextUpdate(0u, emptyList())
+
+      bucketsToUpdate shouldBe BucketUpdate(
+         6u,
+         listOf(1u, 2u, 3u),
+         listOf(
+            Bucket(1u, byteArrayOf(1)),
+            Bucket(2u, byteArrayOf(2)),
+            Bucket(3u, byteArrayOf(3)),
+         )
+      )
+
+      notifier.dataChangeNotified shouldBe true
    }
 }
 

@@ -47,17 +47,24 @@ class BucketsyncRepositoryImpl(
    }
 
    override suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, flags: UByte) {
-      updateBucket(id, data, sortKey, null, flags)
+      updateBucket(id, data, sortKey, null, flags, null)
    }
 
-   private suspend fun updateBucket(id: UByte, data: ByteArray, sortKey: Long?, upstreamId: String?, flags: UByte) =
+   private suspend fun updateBucket(
+      id: UByte,
+      data: ByteArray,
+      sortKey: Long?,
+      upstreamId: String?,
+      flags: UByte,
+      groupId: String?,
+   ) =
       withIO<Unit> {
          queries.transaction {
             require(data.size <= BucketSyncRepository.MAX_BUCKET_SIZE_BYTES) {
                "bucket size (${data.size}) must be at most 255 bytes"
             }
             logcat { "Update bucket $id (${data.size} bytes)" }
-            val inserted = queries.insert(id.toLong(), data, sortKey, upstreamId, flags.toLong()).value
+            val inserted = queries.insert(id.toLong(), data, sortKey, upstreamId, flags.toLong(), groupId).value
             if (inserted == 0L) {
                logcat { "Content was identical, skipping update" }
             }
@@ -158,7 +165,26 @@ class BucketsyncRepositoryImpl(
       backgroundSyncNotifier.notifyDataChanged()
    }
 
-   override suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long?, flags: UByte): Int =
+   override suspend fun deleteGroup(group: String, except: List<String>) = withIO<Unit> {
+      queries.transaction {
+         val nextVersion = queries.getLatestVersion().executeAsOneOrNull().let { it?.MAX ?: 0 } + 1
+         queries.clearBucketsFromGroupExcept(
+            newVersion = nextVersion,
+            groupId = group,
+            except = except,
+         ).value
+      }
+
+      backgroundSyncNotifier.notifyDataChanged()
+   }
+
+   override suspend fun updateBucketDynamic(
+      upstreamId: String,
+      data: ByteArray,
+      sortKey: Long?,
+      flags: UByte,
+      groupId: String?,
+   ): Int =
       withIO<Int> {
          val existingBucket = queries.getBucketWithUpstreamId(upstreamId).executeAsOneOrNull()
 
@@ -179,7 +205,7 @@ class BucketsyncRepositoryImpl(
             }
          }
 
-         updateBucket(targetBucketId.toUByte(), data, sortKey, upstreamId, flags)
+         updateBucket(targetBucketId.toUByte(), data, sortKey, upstreamId, flags, groupId)
          targetBucketId.toInt()
       }
 

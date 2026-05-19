@@ -54,12 +54,23 @@ interface BucketSyncRepository {
     *
     * This will increment the internal version - this bucket will be included in the next update.
     */
-   suspend fun updateBucketDynamic(upstreamId: String, data: ByteArray, sortKey: Long? = null, flags: UByte = 0u): Int
+   suspend fun updateBucketDynamic(
+      upstreamId: String,
+      data: ByteArray,
+      sortKey: Long? = null,
+      flags: UByte = 0u,
+      groupId: String? = null,
+   ): Int
 
    /**
     * Delete data of the bucket with the upstream id [upstreamId] from the watch
     */
    suspend fun deleteBucketDynamic(upstreamId: String)
+
+   /**
+    * Delete all buckets from the specified group, except for the buckets with upstream ids in the [except] list.
+    */
+   suspend fun deleteGroup(group: String, except: List<String> = emptyList())
 
    /**
     * Delete all buckets from the dynamic pool
