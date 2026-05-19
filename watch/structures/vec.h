@@ -60,7 +60,7 @@ typedef size_t vec_type_t;
 	((type*)_vector_insert_dst((vector*)vec_addr, sizeof(type), pos))
 
 #define vector_add(vec_addr, type, value)\
-	((*)vector_add_dst(vec_addr, type) = value)
+	(*vector_add_dst(vec_addr, type) = value)
 #define vector_insert(vec_addr, type, pos, value)\
 	(*vector_insert_dst(vec_addr, type, pos) = value)
 
