@@ -26,7 +26,7 @@ interface BucketSyncRepository {
    suspend fun awaitNextUpdate(
       currentVersion: UShort,
       currentActiveBuckets: List<UByte>,
-      maxActiveBuckets: Int = 15,
+      maxActiveBuckets: Int = BucketSyncRepository.MAX_BUCKETS_LEGACY_WATCHES,
    ): BucketUpdate
 
    /**
@@ -38,7 +38,7 @@ interface BucketSyncRepository {
    suspend fun checkForNextUpdate(
       currentVersion: UShort,
       currentActiveBuckets: List<UByte>,
-      maxActiveBuckets: Int = 15,
+      maxActiveBuckets: Int = BucketSyncRepository.MAX_BUCKETS_LEGACY_WATCHES,
    ): BucketUpdate?
 
    /**
@@ -88,5 +88,7 @@ interface BucketSyncRepository {
    companion object {
       const val MAX_BUCKET_ID = 255
       const val MAX_BUCKET_SIZE_BYTES = 255
+      const val MAX_BUCKETS_LEGACY_WATCHES = 15
+      const val MAX_BUCKETS_CORE_WATCHES = 255
    }
 }

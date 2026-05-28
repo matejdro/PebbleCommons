@@ -8,7 +8,7 @@ interface BucketSyncWatchLoop {
       initialWatchVersion: UShort,
       watchBufferSize: Int,
       currentlyActiveBuckets: List<UByte>,
-      maxActiveBuckets: Int = 15,
+      maxActiveBuckets: Int = BucketSyncRepository.MAX_BUCKETS_LEGACY_WATCHES,
       onBucketsChanged: suspend () -> Unit = {},
    )
 }
