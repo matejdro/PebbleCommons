@@ -2,7 +2,11 @@
 
 #include <pebble.h>
 
-#define MAX_BUCKETS 15
+#if defined PBL_PLATFORM_EMERY || defined PBL_PLATFORM_FLINT
+    #define MAX_BUCKETS 255
+#else
+    #define MAX_BUCKETS 15
+#endif
 
 typedef struct __attribute__ ((packed))
 {
