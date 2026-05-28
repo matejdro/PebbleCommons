@@ -37,6 +37,9 @@ class BucketSyncWatchLoopImpl(
    @VisibleForTesting
    var lastActiveBuckets: List<UByte>? = null
 
+   @VisibleForTesting
+   var lastMaxActiveBuckets: Int? = null
+
    @Suppress("MissingUseCall") // Buffer is used as a long-lived scratch pad across coroutine operations
    override fun sendFirstPacketAndStartLoop(
       helloPacketBase: PebbleDictionary,
@@ -47,6 +50,8 @@ class BucketSyncWatchLoopImpl(
       onBucketsChanged: suspend () -> Unit,
    ) {
       lastActiveBuckets = currentlyActiveBuckets
+      lastMaxActiveBuckets = maxActiveBuckets
+
       bucketSyncJob?.cancel()
       bucketSyncJob = coroutineScope.launch {
          val bucketsyncBuffer = Buffer()
