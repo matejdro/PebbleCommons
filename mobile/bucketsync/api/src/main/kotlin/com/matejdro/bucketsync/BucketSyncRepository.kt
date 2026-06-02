@@ -89,6 +89,6 @@ interface BucketSyncRepository {
       const val MAX_BUCKET_ID = 255
       const val MAX_BUCKET_SIZE_BYTES = 255
       const val MAX_BUCKETS_LEGACY_WATCHES = 15
-      const val MAX_BUCKETS_CORE_WATCHES = 255
+      const val MAX_BUCKETS_CORE_WATCHES = 127
    }
 }

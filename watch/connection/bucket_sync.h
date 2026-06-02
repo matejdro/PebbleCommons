@@ -3,7 +3,7 @@
 #include <pebble.h>
 
 #if defined PBL_PLATFORM_EMERY || defined PBL_PLATFORM_FLINT
-    #define MAX_BUCKETS 255
+    #define MAX_BUCKETS 127
 #else
     #define MAX_BUCKETS 15
 #endif
