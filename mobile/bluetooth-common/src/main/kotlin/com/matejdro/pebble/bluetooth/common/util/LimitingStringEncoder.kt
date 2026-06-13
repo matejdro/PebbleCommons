@@ -20,6 +20,7 @@ class LimitingStringEncoder {
 
       val charBuffer = CharBuffer.wrap(text)
       val result = utf8Encoder.encode(charBuffer, buffer, true)
+      buffer.trimLastInvalidUtf8Character(charBuffer)
 
       val outputArray = if (ellipsize && result.isOverflow) {
          Arrays.copyOf(buffer.array(), buffer.position()) + ELLIPSIS
