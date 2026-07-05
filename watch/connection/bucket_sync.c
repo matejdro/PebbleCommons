@@ -340,4 +340,5 @@ void bucket_sync_set_auto_close_after_sync()
 
 void bucket_sync_register_bucket_deleted_callback(void(* callback)(uint8_t))
 {
+     bucket_deleted_callback = callback;
 }
