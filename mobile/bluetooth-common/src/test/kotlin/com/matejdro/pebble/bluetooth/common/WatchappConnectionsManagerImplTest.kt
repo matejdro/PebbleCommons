@@ -161,6 +161,10 @@ class WatchappConnectionsManagerImplTest {
          receivedPackets += data
          return returnResult
       }
+
+      override suspend fun sendInteractivePackets(packets: List<PebbleDictionary>) = Unit
+      override suspend fun sendNotification(packet: PebbleDictionary) = Unit
+      override suspend fun sendNotification(notification: com.matejdro.catapult.bluetooth.WatchNotificationMessage.Show) = Unit
    }
 }
 
