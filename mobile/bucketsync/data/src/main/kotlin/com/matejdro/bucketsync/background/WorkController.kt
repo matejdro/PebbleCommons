@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 
 @Inject
 @ContributesBinding(AppScope::class)
@@ -29,6 +28,7 @@ class WorkControllerImpl(
    private val pebbleAndroidAppPicker: PebbleAndroidAppPicker,
 ) : WorkController {
    // Background sync works in 3 stages:
+
    // 1. GetConnectedWatchesWorker - Gets connected watches, whenever the list of watches change.
    //    It schedules step 2 for all needed connected watches.
    // 2. GetForegroundAppWorker - It gets the current foreground app. If the app is not a watchface, it re-schedules itself.
@@ -160,7 +160,7 @@ class WorkControllerImpl(
             .addTag(TAG_PER_WATCH_TAG)
             .addTag(name)
             .setInputData(workDataOf(OpenWatchappWorker.DATA_KEY_WATCH to connectedWatch.value))
-            .setBackoffCriteria(BackoffPolicy.LINEAR, 5.minutes.toJavaDuration())
+            .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_INTERVAL_MINS, TimeUnit.SECONDS)
             .build()
       ).await()
    }
@@ -180,6 +180,8 @@ private const val TAG_WATCH_FOREGROUND_APP_PREFIX = "WATCH_FOREGROUND_APP_"
 private const val TAG_WATCH_OPEN_PREFIX = "WATCH_OPEN_"
 
 private const val PEBBLE_STATE_TIMEOUT_DEBOUNCE_SECONDS = 10L
+
+private const val RETRY_INTERVAL_MINS = 5L
 
 interface WorkController {
    suspend fun cancelAllBackgroundWork()
