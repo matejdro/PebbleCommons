@@ -217,6 +217,8 @@ class BucketSyncRepositoryImplTest {
       repo.updateBucket(2u, byteArrayOf(2))
       delay(1.seconds)
 
+      notifier.dataChangeNotified = false
+
       repo.updateBucket(2u, byteArrayOf(2))
       delay(1.seconds)
 
@@ -225,6 +227,8 @@ class BucketSyncRepositoryImplTest {
 
       bucketsToUpdate.isCompleted shouldBe false
       bucketsToUpdate.cancel()
+
+      notifier.dataChangeNotified shouldBe false
    }
 
    @Test

@@ -59,7 +59,7 @@ class BucketsyncRepositoryImpl(
       groupId: String?,
    ) =
       withIO<Unit> {
-         queries.transaction {
+         val dataUpdated = queries.transactionWithResult {
             require(data.size <= BucketSyncRepository.MAX_BUCKET_SIZE_BYTES) {
                "bucket size (${data.size}) must be at most 255 bytes"
             }
@@ -73,9 +73,13 @@ class BucketsyncRepositoryImpl(
                logcat { "Got over UShort_MAX, wrapping around" }
                queries.resetAllVersions()
             }
+
+            inserted > 0
          }
 
-         backgroundSyncNotifier.notifyDataChanged()
+         if (dataUpdated) {
+            backgroundSyncNotifier.notifyDataChanged()
+         }
       }
 
    override suspend fun awaitNextUpdate(
