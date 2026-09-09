@@ -45,7 +45,10 @@ class OpenWatchappWorker(
 
       val currentWatchapp = pebbleinfoRetriever.getActiveApp(watchId).first()
       if (currentWatchapp?.type != Watchapp.Type.WATCHFACE) {
-         logcat { "Foreground app ${currentWatchapp ?: "null"} on the $watchId is not a watchface. Got a race condition, aborting." }
+         logcat {
+            "Foreground app ${currentWatchapp ?: "null"} on the $watchId is not a watchface. " +
+               "Got a race condition, aborting."
+         }
          return Result.retry()
       }
 
