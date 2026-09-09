@@ -14,8 +14,11 @@ import dev.zacsweers.metro.AssistedInject
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
+import io.rebble.pebblekit2.client.PebbleInfoRetriever
 import io.rebble.pebblekit2.client.PebbleSender
 import io.rebble.pebblekit2.common.model.WatchIdentifier
+import io.rebble.pebblekit2.model.Watchapp
+import kotlinx.coroutines.flow.first
 import logcat.logcat
 import si.inova.kotlinova.core.reporting.ErrorReporter
 import java.util.UUID
@@ -27,6 +30,7 @@ class OpenWatchappWorker(
    private val pebbleSender: PebbleSender,
    private val errorReporter: ErrorReporter,
    private val autoSyncNotifier: BucketSyncWatchappOpenController,
+   private val pebbleinfoRetriever: PebbleInfoRetriever,
    @WatchappId
    private val watchappId: UUID,
    @Assisted
@@ -37,6 +41,12 @@ class OpenWatchappWorker(
       if (watchId == null) {
          errorReporter.report(Exception("Got missing watch ID"))
          return Result.failure()
+      }
+
+      val currentWatchapp = pebbleinfoRetriever.getActiveApp(watchId).first()
+      if (currentWatchapp?.type != Watchapp.Type.WATCHFACE) {
+         logcat { "Foreground app ${currentWatchapp ?: "null"} on the $watchId is not a watchface. Got a race condition, aborting." }
+         return Result.retry()
       }
 
       logcat { "Opening the watchapp on the $watchId" }

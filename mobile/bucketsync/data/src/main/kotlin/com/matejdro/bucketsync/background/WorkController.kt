@@ -1,5 +1,6 @@
 package com.matejdro.bucketsync.background
 
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 @Inject
 @ContributesBinding(AppScope::class)
@@ -158,6 +160,7 @@ class WorkControllerImpl(
             .addTag(TAG_PER_WATCH_TAG)
             .addTag(name)
             .setInputData(workDataOf(OpenWatchappWorker.DATA_KEY_WATCH to connectedWatch.value))
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 5.minutes.toJavaDuration())
             .build()
       ).await()
    }
