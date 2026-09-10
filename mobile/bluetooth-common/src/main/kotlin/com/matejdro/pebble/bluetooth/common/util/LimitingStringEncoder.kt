@@ -16,6 +16,8 @@ class LimitingStringEncoder {
          }
       }
 
+      utf8Encoder.reset()
+
       val buffer = ByteBuffer.allocate(if (ellipsize) maxSize - ELLIPSIS.size else maxSize)
 
       val charBuffer = CharBuffer.wrap(text)
