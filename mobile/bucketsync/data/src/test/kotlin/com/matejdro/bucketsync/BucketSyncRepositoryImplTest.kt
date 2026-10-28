@@ -833,6 +833,17 @@ class BucketSyncRepositoryImplTest {
 
       notifier.dataChangeNotified shouldBe true
    }
+
+   @Test
+   fun `Do not notify about changes when nothing from the group was deleted`() = scope.runTest {
+      repo.init(1)
+      delay(1.seconds)
+
+      repo.deleteGroup("B", except = listOf("3"))
+      delay(1.seconds)
+
+      notifier.dataChangeNotified shouldBe false
+   }
 }
 
 private fun createTestBucketQueries(

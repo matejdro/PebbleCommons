@@ -170,7 +170,7 @@ class BucketsyncRepositoryImpl(
    }
 
    override suspend fun deleteGroup(group: String, except: List<String>) = withIO<Unit> {
-      queries.transaction {
+      val deletedRows = queries.transactionWithResult {
          val nextVersion = queries.getLatestVersion().executeAsOneOrNull().let { it?.MAX ?: 0 } + 1
          queries.clearBucketsFromGroupExcept(
             newVersion = nextVersion,
@@ -179,7 +179,9 @@ class BucketsyncRepositoryImpl(
          ).value
       }
 
-      backgroundSyncNotifier.notifyDataChanged()
+      if (deletedRows > 0) {
+         backgroundSyncNotifier.notifyDataChanged()
+      }
    }
 
    override suspend fun updateBucketDynamic(
